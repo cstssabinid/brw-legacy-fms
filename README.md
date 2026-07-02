@@ -5,13 +5,13 @@ Full-stack financial management system for **BRW LEGACY CO. Ltd** and the public
 ## Features
 
 - Public Berwa Photo Hub landing page with services, packages, gallery, contact links, WhatsApp buttons and booking form.
-- Worker portal for assigned bookings, income, allowed expenses, own transactions, reports and Berwa-Bot help.
+- Worker portal for assigned bookings, income, allowed expenses, own transactions, reports and Berwa Assistant help.
 - Admin portal for dashboard analytics, transactions, bookings, reports, month closing, cash count, loans, budget, services, packages, blog, gallery, users, settings, audit logs and imports.
 - Prisma schema covering users, roles, services, packages, clients, bookings, transactions, categories, accounts, periods, reports, cash count, loans, budgets, blog, gallery, chat, audit logs, attachments, notifications and settings.
 - Role-protected admin and worker routes with NextAuth credentials login.
 - Zod validation for bookings and transactions.
 - Month closing rule: pending records block closing, counted balances are compared with expected closing balance, a difference requires a reason, audit logs are saved, and the new month opens with previous counted closing balance.
-- Rule-based Berwa-Bot with public, worker and admin permission boundaries.
+- Rule-based Berwa Assistant with public, worker and admin permission boundaries.
 - CSV report export and CSV import preview for old monthly reports.
 - Responsive UI with dark/light mode, dashboard charts and mobile-friendly navigation.
 
