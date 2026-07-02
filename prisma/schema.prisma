@@ -1,0 +1,429 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PUBLIC_VISITOR
+  CLIENT
+  WORKER
+  MANAGER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ServiceType {
+  PHOTOGRAPHY
+  DESIGN
+  PRINTING
+  ONLINE
+  PAPETERIE
+  COMPANY
+}
+
+enum PackageType {
+  INDOOR
+  OUTDOOR
+  WEDDING
+  EVENT
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  NO_PAYMENT
+  DEPOSIT_PAID
+  FULLY_PAID
+}
+
+enum LocationType {
+  STUDIO
+  OUTDOOR
+  WEDDING_VENUE
+  EVENT_VENUE
+  OTHER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum CategoryScope {
+  BUSINESS
+  HOME
+  PERSONAL
+  COMPANY
+}
+
+enum AccountType {
+  CASH
+  MOMO
+  BANK
+  CHEQUE
+  OTHER
+}
+
+enum PeriodStatus {
+  OPEN
+  UNDER_REVIEW
+  CLOSED
+}
+
+enum ReportStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+}
+
+enum LoanStatus {
+  PLANNED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model User {
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  phone          String?
+  passwordHash   String
+  role           Role          @default(WORKER)
+  avatar         String?
+  status         UserStatus    @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  bookings       Booking[]     @relation("AssignedWorker")
+  recorded       Transaction[] @relation("RecordedBy")
+  confirmed      Transaction[] @relation("ConfirmedBy")
+  closedPeriods  MonthlyPeriod[]
+  approvedReport MonthlyReport[]
+  posts          BlogPost[]
+  auditLogs      AuditLog[]
+  attachments    Attachment[]
+  notifications  Notification[]
+  chatSessions   ChatSession[]
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  type         ServiceType
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  packages     Package[]
+  bookings     Booking[]
+  transactions Transaction[]
+}
+
+model Package {
+  id           String        @id @default(cuid())
+  serviceId    String
+  name         String
+  packageType  PackageType
+  price        Decimal       @db.Decimal(12, 2)
+  currency     String        @default("RWF")
+  duration     String?
+  includes     Json
+  description  String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  service      Service       @relation(fields: [serviceId], references: [id])
+  bookings     Booking[]
+  transactions Transaction[]
+}
+
+model Client {
+  id           String        @id @default(cuid())
+  fullName     String
+  phone        String
+  email        String?
+  address      String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  bookings     Booking[]
+  transactions Transaction[]
+}
+
+model Booking {
+  id               String         @id @default(cuid())
+  clientId         String
+  serviceId        String
+  packageId        String?
+  assignedWorkerId String?
+  bookingDate      DateTime
+  bookingTime      String
+  locationType     LocationType
+  location         String?
+  numberOfPeople   Int?
+  specialRequest   String?
+  totalAmount      Decimal?       @db.Decimal(12, 2)
+  depositAmount    Decimal        @default(0) @db.Decimal(12, 2)
+  remainingAmount  Decimal?       @db.Decimal(12, 2)
+  paymentStatus    PaymentStatus  @default(NO_PAYMENT)
+  bookingStatus    BookingStatus  @default(PENDING)
+  proofUrl         String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  client           Client         @relation(fields: [clientId], references: [id])
+  service          Service        @relation(fields: [serviceId], references: [id])
+  package          Package?       @relation(fields: [packageId], references: [id])
+  assignedWorker   User?          @relation("AssignedWorker", fields: [assignedWorkerId], references: [id])
+  transactions     Transaction[]
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  periodId        String
+  type            TransactionType
+  categoryId      String
+  subcategory     String?
+  serviceId       String?
+  packageId       String?
+  bookingId       String?
+  clientId        String?
+  accountId       String
+  paymentMethod   String
+  amount          Decimal           @db.Decimal(12, 2)
+  currency        String            @default("RWF")
+  transactionDate DateTime
+  transactionTime String
+  description     String?
+  comments        String?
+  attachmentUrl   String?
+  status          TransactionStatus @default(PENDING)
+  recordedById    String
+  confirmedById   String?
+  confirmedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  period          MonthlyPeriod     @relation(fields: [periodId], references: [id])
+  category        Category          @relation(fields: [categoryId], references: [id])
+  service         Service?          @relation(fields: [serviceId], references: [id])
+  package         Package?          @relation(fields: [packageId], references: [id])
+  booking         Booking?          @relation(fields: [bookingId], references: [id])
+  client          Client?           @relation(fields: [clientId], references: [id])
+  account         Account           @relation(fields: [accountId], references: [id])
+  recordedBy      User              @relation("RecordedBy", fields: [recordedById], references: [id])
+  confirmedBy     User?             @relation("ConfirmedBy", fields: [confirmedById], references: [id])
+
+  @@index([transactionDate])
+  @@index([status])
+  @@index([type])
+}
+
+model Category {
+  id           String          @id @default(cuid())
+  name         String
+  type         TransactionType
+  scope        CategoryScope
+  active       Boolean         @default(true)
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model Account {
+  id             String        @id @default(cuid())
+  name           String
+  type           AccountType
+  openingBalance Decimal       @default(0) @db.Decimal(12, 2)
+  currentBalance Decimal       @default(0) @db.Decimal(12, 2)
+  active         Boolean       @default(true)
+  transactions   Transaction[]
+}
+
+model MonthlyPeriod {
+  id                     String          @id @default(cuid())
+  month                  Int
+  year                   Int
+  startDate              DateTime
+  endDate                DateTime
+  openingBalance         Decimal         @default(0) @db.Decimal(12, 2)
+  expectedClosingBalance Decimal         @default(0) @db.Decimal(12, 2)
+  countedClosingBalance  Decimal         @default(0) @db.Decimal(12, 2)
+  difference             Decimal         @default(0) @db.Decimal(12, 2)
+  status                 PeriodStatus    @default(OPEN)
+  closedById             String?
+  closedAt               DateTime?
+  adminNotes             String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  closedBy               User?           @relation(fields: [closedById], references: [id])
+  reports                MonthlyReport[]
+  transactions           Transaction[]
+  cashCounts             CashCount[]
+  budgets                Budget[]
+
+  @@unique([month, year])
+}
+
+model MonthlyReport {
+  id               String       @id @default(cuid())
+  periodId         String
+  totalIncome      Decimal      @default(0) @db.Decimal(12, 2)
+  totalExpenses    Decimal      @default(0) @db.Decimal(12, 2)
+  businessIncome   Decimal      @default(0) @db.Decimal(12, 2)
+  businessExpenses Decimal      @default(0) @db.Decimal(12, 2)
+  homeExpenses     Decimal      @default(0) @db.Decimal(12, 2)
+  externalIncome   Decimal      @default(0) @db.Decimal(12, 2)
+  netBalance       Decimal      @default(0) @db.Decimal(12, 2)
+  reportStatus     ReportStatus @default(DRAFT)
+  generatedAt      DateTime     @default(now())
+  approvedById     String?
+  approvedAt       DateTime?
+  pdfUrl           String?
+  period           MonthlyPeriod @relation(fields: [periodId], references: [id])
+  approvedBy       User?         @relation(fields: [approvedById], references: [id])
+}
+
+model CashCount {
+  id           String        @id @default(cuid())
+  periodId     String
+  denomination Int
+  quantity     Int
+  total        Decimal       @db.Decimal(12, 2)
+  period       MonthlyPeriod @relation(fields: [periodId], references: [id])
+}
+
+model LoanPlan {
+  id               String     @id @default(cuid())
+  name             String
+  sourceOfPayment  String
+  plannedDate      DateTime
+  amountToBePaid   Decimal    @db.Decimal(12, 2)
+  amountPaid       Decimal    @default(0) @db.Decimal(12, 2)
+  remainingBalance Decimal    @db.Decimal(12, 2)
+  status           LoanStatus @default(PLANNED)
+  notes            String?
+}
+
+model Budget {
+  id            String        @id @default(cuid())
+  periodId      String
+  categoryId    String
+  plannedAmount Decimal       @db.Decimal(12, 2)
+  actualAmount  Decimal       @default(0) @db.Decimal(12, 2)
+  difference    Decimal       @default(0) @db.Decimal(12, 2)
+  notes         String?
+  period        MonthlyPeriod @relation(fields: [periodId], references: [id])
+  category      Category      @relation(fields: [categoryId], references: [id])
+}
+
+model BlogPost {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  content     String
+  coverImage  String?
+  status      PublishStatus @default(DRAFT)
+  authorId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  publishedAt DateTime?
+  author      User          @relation(fields: [authorId], references: [id])
+}
+
+model GalleryImage {
+  id          String   @id @default(cuid())
+  title       String
+  imageUrl    String
+  category    String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model ChatSession {
+  id          String        @id @default(cuid())
+  userId      String?
+  visitorId   String?
+  roleContext Role          @default(PUBLIC_VISITOR)
+  createdAt   DateTime      @default(now())
+  user        User?         @relation(fields: [userId], references: [id])
+  messages    ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  sender    String
+  message   String
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  reason     String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  entityType  String
+  entityId    String
+  fileUrl     String
+  fileName    String
+  fileType    String
+  uploadedById String?
+  createdAt   DateTime @default(now())
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Settings {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+}

@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f8fb;
+  --foreground: #08111f;
+  --card: #ffffff;
+  --muted: #5f6b7a;
+  --navy: #061a38;
+  --gold: #d8a84f;
+  --border: #dbe2ea;
+  --display-font: Georgia, "Times New Roman", serif;
+  --body-font: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+
+.dark {
+  --background: #05070b;
+  --foreground: #f7f8fb;
+  --card: #0b1220;
+  --muted: #a5b1c2;
+  --navy: #10284f;
+  --gold: #f0c76c;
+  --border: #1d2a3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--body-font);
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/studio-blog/background.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: min(760px, 76vw) auto;
+  opacity: 0.45;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--background) 62%, transparent);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(6, 26, 56, 0.08);
+  transform: translateY(0) scale(1);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background 220ms ease;
+  will-change: transform;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--border));
+  box-shadow: 0 24px 60px rgba(6, 26, 56, 0.16), 0 0 0 1px rgba(216, 168, 79, 0.12);
+  transform: translateY(-5px) scale(1.012);
+}
+
+.card:focus-within {
+  border-color: color-mix(in srgb, var(--gold) 68%, var(--border));
+  box-shadow: 0 22px 52px rgba(6, 26, 56, 0.14), 0 0 0 1px rgba(216, 168, 79, 0.14);
+}
+
+.protected-contract-modal:hover {
+  transform: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.72rem 1rem;
+  font-weight: 700;
+  transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--navy);
+  color: #fff;
+}
+
+.btn-gold {
+  background: var(--gold);
+  color: #101010;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0.78rem 0.85rem;
+}
+
+.page-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.display-serif {
+  font-family: var(--display-font);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.hero-slide-active {
+  animation: hero-drift 8s ease-out both;
+}
+
+.portfolio-rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold) transparent;
+}
+
+.portfolio-rail::-webkit-scrollbar {
+  height: 8px;
+}
+
+.portfolio-rail::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  border-radius: 999px;
+}
+
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.brand-logo-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.dark .brand-logo-light {
+  display: none;
+}
+
+.dark .brand-logo-dark {
+  display: block;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .mobile-stack {
+    grid-template-columns: 1fr !important;
+  }
+
+  body::before {
+    background-size: 92vw auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .hero-slide-active {
+    animation: none;
+  }
+}
+
+@keyframes hero-drift {
+  from {
+    transform: scale(1.06);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
