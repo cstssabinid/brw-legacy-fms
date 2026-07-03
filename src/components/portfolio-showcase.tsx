@@ -72,14 +72,20 @@ export function PortfolioShowcase() {
           </div>
 
           <div>
-            <div className="relative min-h-[440px] overflow-hidden rounded-lg border border-white/12 bg-white/5">
+            <div className="relative min-h-[440px] overflow-hidden rounded-lg border border-white/12 bg-black">
+              <img
+                key={`${selectedImage}-backdrop`}
+                src={selectedImage}
+                alt=""
+                className="absolute inset-0 h-full w-full scale-110 object-cover object-[center_28%] opacity-45 blur-xl"
+              />
               <img
                 key={selectedImage}
                 src={selectedImage}
                 alt={`${selectedCategory.title} portfolio`}
-                className="portfolio-main-image absolute inset-0 h-full w-full object-cover"
+                className="portfolio-main-image absolute inset-0 h-full w-full object-contain"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/12 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-[var(--gold)]">{selectedCategory.eyebrow}</p>
                 <h3 className="display-serif mt-2 text-4xl">{selectedCategory.title}</h3>

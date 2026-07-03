@@ -151,7 +151,7 @@ button, input, select, textarea {
 }
 
 .portfolio-main-image {
-  object-position: center 28%;
+  object-position: center center;
   animation: portfolio-fade 420ms ease both;
 }
 
