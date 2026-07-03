@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Camera, Images, Sparkles } from "lucide-react";
 import { portfolioCategories } from "@/lib/portfolio";
 
@@ -16,6 +16,14 @@ export function PortfolioShowcase() {
   const [activeImage, setActiveImage] = useState(0);
   const selectedCategory = portfolioCategories[activeCategory];
   const selectedImage = selectedCategory.images[activeImage] ?? selectedCategory.images[0];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveImage((current) => (current + 1) % selectedCategory.images.length);
+    }, 2000);
+
+    return () => window.clearInterval(timer);
+  }, [selectedCategory.id, selectedCategory.images.length]);
 
   const showCategory = (index: number) => {
     setActiveCategory(index);
@@ -66,9 +74,10 @@ export function PortfolioShowcase() {
           <div>
             <div className="relative min-h-[440px] overflow-hidden rounded-lg border border-white/12 bg-white/5">
               <img
+                key={selectedImage}
                 src={selectedImage}
                 alt={`${selectedCategory.title} portfolio`}
-                className="absolute inset-0 h-full w-full object-cover transition duration-700"
+                className="portfolio-main-image absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -82,7 +91,7 @@ export function PortfolioShowcase() {
             </div>
 
             <div className="portfolio-rail mt-4 flex gap-3 overflow-x-auto pb-2" aria-label="Portfolio image selector">
-              {selectedCategory.images.slice(0, 14).map((image, index) => (
+              {selectedCategory.images.map((image, index) => (
                 <button
                   key={image}
                   type="button"
@@ -93,7 +102,7 @@ export function PortfolioShowcase() {
                   }`}
                   aria-label={`Show ${selectedCategory.label} image ${index + 1}`}
                 >
-                  <img src={image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img src={image} alt="" className="h-full w-full object-cover object-[center_28%] transition duration-500 group-hover:scale-105" />
                   <span className="absolute inset-0 bg-black/20" />
                 </button>
               ))}

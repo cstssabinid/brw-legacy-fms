@@ -150,6 +150,11 @@ button, input, select, textarea {
   scrollbar-color: var(--gold) transparent;
 }
 
+.portfolio-main-image {
+  object-position: center 28%;
+  animation: portfolio-fade 420ms ease both;
+}
+
 .portfolio-rail::-webkit-scrollbar {
   height: 8px;
 }
@@ -230,6 +235,18 @@ th {
   }
 
   to {
+    transform: scale(1);
+  }
+}
+
+@keyframes portfolio-fade {
+  from {
+    opacity: 0.62;
+    transform: scale(1.015);
+  }
+
+  to {
+    opacity: 1;
     transform: scale(1);
   }
 }
