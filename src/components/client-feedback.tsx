@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Quote, Star } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Camera, Quote, Star } from "lucide-react";
 
-const feedback = [
+type FeedbackItem = {
+  name: string;
+  session: string;
+  quote: string;
+  image: string;
+};
+
+const defaultFeedback: FeedbackItem[] = [
   {
     name: "Aline M.",
     session: "Indoor Gold Session",
@@ -25,15 +32,70 @@ const feedback = [
 ];
 
 export function ClientFeedback() {
+  const [clientFeedback, setClientFeedback] = useState<FeedbackItem[]>([]);
   const [active, setActive] = useState(0);
-  const item = feedback[active];
+  const [preview, setPreview] = useState("");
+  const [posting, setPosting] = useState(false);
+  const feedback = useMemo(() => [...defaultFeedback, ...clientFeedback], [clientFeedback]);
+  const item = feedback[active] ?? feedback[0];
+
+  useEffect(() => {
+    fetch("/api/feedback")
+      .then((response) => response.json())
+      .then((data) => setClientFeedback(Array.isArray(data.feedback) ? data.feedback : []))
+      .catch(() => setClientFeedback([]));
+  }, []);
 
   function move(direction: number) {
     setActive((current) => (current + direction + feedback.length) % feedback.length);
   }
 
+  function handleImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setPreview("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  }
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const quote = String(form.get("quote") ?? "").trim();
+    if (!quote || !preview) return;
+
+    setPosting(true);
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: String(form.get("name") ?? "").trim(),
+        session: String(form.get("session") ?? "").trim(),
+        quote,
+        image: preview
+      })
+    });
+    const data = await res.json();
+    setPosting(false);
+    if (!res.ok) return;
+
+    const next = Array.isArray(data.feedback) ? data.feedback : [{
+      name: String(form.get("name") ?? "").trim() || "Client",
+      session: String(form.get("session") ?? "").trim() || "Berwa Photo Hub service",
+      quote,
+      image: preview
+    }];
+    setClientFeedback(next);
+    setActive(defaultFeedback.length);
+    setPreview("");
+    event.currentTarget.reset();
+  }
+
   return (
-    <section className="grid gap-6 md:grid-cols-[0.9fr_1.1fr] mobile-stack">
+    <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] mobile-stack">
       <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[#05070b]">
         <img src={item.image} alt={`${item.name} feedback`} className="h-full min-h-80 w-full object-cover" onError={(event) => { event.currentTarget.src = "/brand/studio-placeholder.svg"; }} />
       </div>
@@ -59,6 +121,20 @@ export function ClientFeedback() {
           </div>
         </div>
       </div>
+      <form className="card grid gap-4 p-5 lg:col-span-2" onSubmit={submit}>
+        <div className="grid gap-4 md:grid-cols-[1fr_1fr_1.2fr] mobile-stack">
+          <input className="input" name="name" placeholder="Your name" />
+          <input className="input" name="session" placeholder="Service received" />
+          <label className="btn card min-h-12 cursor-pointer justify-start">
+            <Camera size={18} />
+            <span>{preview ? "Picture selected" : "Add feedback picture"}</span>
+            <input className="sr-only" type="file" accept="image/*" onChange={handleImage} required />
+          </label>
+        </div>
+        <textarea className="input min-h-24" name="quote" placeholder="Write your comment" required />
+        {preview && <img src={preview} alt="Feedback preview" className="h-28 w-28 rounded-lg border border-[var(--border)] object-cover" />}
+        <button className="btn btn-primary w-full md:w-fit" type="submit" disabled={posting}>{posting ? "Posting..." : "Post Feedback"}</button>
+      </form>
     </section>
   );
 }

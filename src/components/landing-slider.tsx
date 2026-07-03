@@ -7,7 +7,7 @@ import { brand } from "@/lib/brand";
 
 const slides = [
   {
-    image: "/studio-blog/client-feedback-1.jpg",
+    image: "/studio-blog/indoor-package-1.jpg",
     eyebrow: "Studio portrait sessions",
     title: "Berwa Photo Hub",
     copy: "Comfortable guided sessions, polished retouching, and portraits that still feel natural.",

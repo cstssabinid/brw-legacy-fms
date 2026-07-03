@@ -9,8 +9,7 @@ import { portfolioCategories } from "@/lib/portfolio";
 
 export const dynamic = "force-dynamic";
 
-const eventPackageImages = portfolioCategories.find((category) => category.id === "events")?.images ?? [];
-const eventPackageImageOrder = [2, 6, 4, 7, 1, 5, 0, 3];
+const eventPackageImages = portfolioCategories.find((category) => category.id === "event-coverage")?.images ?? [];
 
 export default async function HomePage() {
   const [services, catalogPackages] = await Promise.all([getActiveServices(), getActiveCatalogPackages()]);
@@ -30,7 +29,12 @@ export default async function HomePage() {
           <Link href="/services" className="font-bold text-[var(--navy)] dark:text-[var(--gold)]">View all services</Link>
         </div>
         <div className="responsive-grid">
-          {services.slice(0, 12).map((service) => <article className="card p-4 font-bold transition hover:-translate-y-1" key={service}>{service}</article>)}
+          {services.slice(0, 12).map((service) => (
+            <Link className="card block p-4 font-bold transition hover:-translate-y-1" href={`/booking?service=${encodeURIComponent(service)}`} key={service}>
+              {service}
+              <span className="mt-2 block text-sm font-semibold text-[var(--muted)]">Book this service</span>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -63,7 +67,7 @@ export default async function HomePage() {
               key={item.name}
               item={item}
               category="Event"
-              imageSrc={eventPackageImages[eventPackageImageOrder[index % eventPackageImageOrder.length]]}
+              imageSrc={eventPackageImages[index % eventPackageImages.length] ?? "/brand/outdoor-placeholder.svg"}
               premium={item.level === "Platinum"}
             />
           ))}

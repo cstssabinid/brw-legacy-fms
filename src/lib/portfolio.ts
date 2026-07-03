@@ -1,48 +1,61 @@
 export type PortfolioCategory = {
-  id: "studio-portraits" | "outdoors" | "events" | "wedding-coverage";
+  id: "studio-portraits" | "outdoor-sessions" | "event-coverage" | "weddings";
   label: string;
   eyebrow: string;
   title: string;
+  shortTitle: string;
   copy: string;
+  description: string;
   images: string[];
+  cta: string;
 };
 
-const studioPortraits = Array.from({ length: 44 }, (_, index) => `/studio-blog/studio_portraits%20(${index + 1}).JPG`);
-const outdoors = Array.from({ length: 15 }, (_, index) => `/studio-blog/outdoors%20(${index + 1}).JPG`);
-const events = Array.from({ length: 8 }, (_, index) => `/studio-blog/events%20(${index + 1}).JPG`);
-const weddingCoverage = Array.from({ length: 4 }, (_, index) => `/studio-blog/wedding_covareges%20(${index + 1}).JPG`);
+const imageSet = (folder: string, prefix: string, count: number) =>
+  Array.from({ length: count }, (_, index) => `/portfolio/${folder}/${prefix}-${index + 1}.jpg`);
 
 export const portfolioCategories: PortfolioCategory[] = [
   {
     id: "studio-portraits",
-    label: "Studio portraits",
+    label: "Studio Portraits",
     eyebrow: "Portrait",
     title: "Studio Portraits",
-    copy: "Controlled lighting, polished posing, and clean retouching for personal, fashion, and profile portraits.",
-    images: studioPortraits
+    shortTitle: "Portrait",
+    copy: "Clean portraits with controlled lighting, polished posing, and professional retouching for personal, fashion, and profile sessions.",
+    description: "Clean portraits with controlled lighting, polished posing, and professional retouching for personal, fashion, and profile sessions.",
+    images: imageSet("studio", "studio", 44),
+    cta: "View Studio Work"
   },
   {
-    id: "outdoors",
-    label: "Outdoors",
-    eyebrow: "Lifestyle",
-    title: "Outdoor Stories",
-    copy: "Natural locations shaped into bright memories for couples, families, graduates, and personal milestones.",
-    images: outdoors
+    id: "outdoor-sessions",
+    label: "Outdoor Sessions",
+    eyebrow: "Outdoor",
+    title: "Outdoor Sessions",
+    shortTitle: "Outdoor",
+    copy: "Natural light photography for birthdays, lifestyle shoots, couple sessions, and personal memories in beautiful outdoor locations.",
+    description: "Natural light photography for birthdays, lifestyle shoots, couple sessions, and personal memories in beautiful outdoor locations.",
+    images: imageSet("outdoor", "outdoor", 15),
+    cta: "View Outdoor Work"
   },
   {
-    id: "events",
-    label: "Events",
+    id: "event-coverage",
+    label: "Event Coverage",
     eyebrow: "Coverage",
-    title: "Event Moments",
-    copy: "Clear, lively coverage for ceremonies, corporate gatherings, birthdays, and community celebrations.",
-    images: events
+    title: "Event Coverage",
+    shortTitle: "Events",
+    copy: "Professional coverage for celebrations, launches, parties, graduations, and special gatherings with clear storytelling through images.",
+    description: "Professional coverage for celebrations, launches, parties, graduations, and special gatherings with clear storytelling through images.",
+    images: imageSet("events", "event", 8),
+    cta: "View Event Work"
   },
   {
-    id: "wedding-coverage",
-    label: "Wedding coverage",
-    eyebrow: "Marriage",
-    title: "Wedding Coverage",
-    copy: "Structured storytelling for ceremonies, receptions, portraits, albums, and highlight memories.",
-    images: weddingCoverage
+    id: "weddings",
+    label: "Weddings",
+    eyebrow: "Wedding",
+    title: "Weddings",
+    shortTitle: "Wedding",
+    copy: "Elegant wedding photography for traditional, civil, and church ceremonies, capturing the full story from preparation to celebration.",
+    description: "Elegant wedding photography for traditional, civil, and church ceremonies, capturing the full story from preparation to celebration.",
+    images: imageSet("weddings", "wedding", 4),
+    cta: "View Wedding Work"
   }
 ];

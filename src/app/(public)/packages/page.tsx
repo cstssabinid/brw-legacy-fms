@@ -6,8 +6,7 @@ import { portfolioCategories } from "@/lib/portfolio";
 
 export const dynamic = "force-dynamic";
 
-const eventPackageImages = portfolioCategories.find((category) => category.id === "events")?.images ?? [];
-const eventPackageImageOrder = [2, 6, 4, 7, 1, 5, 0, 3];
+const eventPackageImages = portfolioCategories.find((category) => category.id === "event-coverage")?.images ?? [];
 
 export default async function PackagesPage() {
   const grouped = packagesByType(await getActiveCatalogPackages());
@@ -57,7 +56,7 @@ export default async function PackagesPage() {
               key={`e-${item.name}`}
               item={item}
               category="Event"
-              imageSrc={eventPackageImages[eventPackageImageOrder[index % eventPackageImageOrder.length]]}
+              imageSrc={eventPackageImages[index % eventPackageImages.length] ?? "/brand/outdoor-placeholder.svg"}
               premium={item.level === "Platinum"}
             />
           ))}

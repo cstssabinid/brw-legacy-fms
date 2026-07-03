@@ -1,33 +1,12 @@
 import { portfolioCategories } from "@/lib/portfolio";
 
-const [studioPortraits, outdoors, events, weddingCoverage] = portfolioCategories;
-
-const featuredImages = [
-  { category: studioPortraits, image: studioPortraits.images[0], span: "lg:col-span-3 lg:row-span-2" },
-  { category: events, image: events.images[2], span: "lg:col-span-3 lg:row-span-2" },
-  { category: weddingCoverage, image: weddingCoverage.images[0], span: "lg:col-span-3 lg:row-span-3" },
-  { category: studioPortraits, image: studioPortraits.images[4], span: "lg:col-span-3 lg:row-span-3" },
-  { category: studioPortraits, image: studioPortraits.images[8], span: "lg:col-span-6 lg:row-span-2" },
-  { category: outdoors, image: outdoors.images[1], span: "lg:col-span-3 lg:row-span-2" },
-  { category: events, image: events.images[5], span: "lg:col-span-3 lg:row-span-2" },
-  { category: studioPortraits, image: studioPortraits.images[14], span: "lg:col-span-4 lg:row-span-2" },
-  { category: outdoors, image: outdoors.images[9], span: "lg:col-span-4 lg:row-span-2" },
-  { category: weddingCoverage, image: weddingCoverage.images[2], span: "lg:col-span-4 lg:row-span-2" }
-];
-
-const usedFeaturedImages = new Set(featuredImages.map((item) => item.image));
-const galleryImages = [
-  ...featuredImages,
-  ...portfolioCategories.flatMap((category) =>
-    category.images
-      .filter((image) => !usedFeaturedImages.has(image))
-      .map((image, index) => ({
-        category,
-        image,
-        span: index % 11 === 0 ? "lg:col-span-4 lg:row-span-2" : index % 7 === 0 ? "lg:col-span-3 lg:row-span-2" : "lg:col-span-2 lg:row-span-1"
-      }))
-  )
-];
+const galleryImages = portfolioCategories.flatMap((category, categoryIndex) =>
+  category.images.map((image, index) => ({
+    category,
+    image,
+    span: index === 0 ? "lg:col-span-3 lg:row-span-2" : categoryIndex % 2 === 0 ? "lg:col-span-3 lg:row-span-1" : "lg:col-span-2 lg:row-span-1"
+  }))
+);
 
 export default function GalleryPage() {
   return (
