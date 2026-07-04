@@ -14,13 +14,32 @@ async function nextBookingReference(tx: Prisma.TransactionClient, year: number, 
   return `BPH-${year}-${String(count + 1 + offset).padStart(6, "0")}`;
 }
 
+function bookingSaveError(error: unknown) {
+  const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+  const message = error instanceof Error ? error.message : "";
+
+  if (code === "P1001" || message.includes("Can't reach database server")) {
+    return { status: 503, error: "The booking system database is temporarily unavailable. Please contact Berwa Photo Hub on WhatsApp or email and include your booking details." };
+  }
+
+  if (code === "P2021" || code === "P2022" || message.includes("does not exist in the current database")) {
+    return { status: 500, error: "The booking system database needs to be updated before this booking can be saved. Please contact Berwa Photo Hub on WhatsApp or email while we resolve it." };
+  }
+
+  if (message.includes("Unknown service") || message.includes("package")) {
+    return { status: 400, error: message };
+  }
+
+  return { status: 500, error: "Your booking could not be saved due to a system issue. Please try again or contact Berwa Photo Hub on WhatsApp or email." };
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
   const parsed = bookingSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Missing required booking field", issues: parsed.error.flatten() }, { status: 400 });
 
   try {
-  const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
     const service = await tx.service.findFirst({ where: { name: parsed.data.desiredService, active: true } });
     if (!service) throw new Error("Unknown service");
     const selectedPackage = parsed.data.desiredPackage ? await tx.package.findFirst({ where: { name: parsed.data.desiredPackage, serviceId: service.id, active: true } }) : null;
@@ -85,28 +104,28 @@ export async function POST(request: Request) {
     return booking;
   });
 
-  return NextResponse.json({
-    ok: true,
-    booking: {
-      bookingReference: result.bookingReference,
-      clientFullName: result.client.fullName,
-      clientPhone: result.client.phone,
-      clientEmail: result.client.email,
-      serviceName: result.service.name,
-      packageName: result.package?.name,
-      packagePrice: result.package ? Number(result.package.price) : null,
-      bookingDate: result.bookingDate.toISOString(),
-      bookingTime: result.bookingTime,
-      locationType: result.locationType,
-      location: result.location,
-      numberOfPeople: result.numberOfPeople,
-      specialRequest: result.specialRequest
-    },
-    message: "Booking request received. Please continue on WhatsApp or email for confirmation and payment instructions."
-  });
+    return NextResponse.json({
+      ok: true,
+      booking: {
+        bookingReference: result.bookingReference,
+        clientFullName: result.client.fullName,
+        clientPhone: result.client.phone,
+        clientEmail: result.client.email,
+        serviceName: result.service.name,
+        packageName: result.package?.name,
+        packagePrice: result.package ? Number(result.package.price) : null,
+        bookingDate: result.bookingDate.toISOString(),
+        bookingTime: result.bookingTime,
+        locationType: result.locationType,
+        location: result.location,
+        numberOfPeople: result.numberOfPeople,
+        specialRequest: result.specialRequest
+      },
+      message: "Booking request received. Please continue on WhatsApp or email for confirmation and payment instructions."
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Your booking could not be saved. Please check your information and try again.";
-    const status = message.includes("Unknown service") || message.includes("package") ? 400 : 500;
-    return NextResponse.json({ error: status === 500 ? "Your booking could not be saved. Please check your information and try again." : message }, { status });
+    console.error("Booking save failed", error);
+    const response = bookingSaveError(error);
+    return NextResponse.json({ error: response.error }, { status: response.status });
   }
 }
