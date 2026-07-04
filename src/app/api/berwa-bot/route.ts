@@ -3,12 +3,15 @@ import { brand, packages } from "@/lib/brand";
 
 const publicAnswers = [
   { keys: ["contact", "phone", "whatsapp"], answer: `You can contact Berwa Photo Hub on ${brand.phone}, use WhatsApp ${brand.whatsappDirect}, or open the catalog ${brand.whatsappCatalog}.` },
+  { keys: ["how do i pay", "how to pay", "payment instructions"], answer: "Payments are arranged directly with Berwa Photo Hub after your booking request is reviewed. Continue through our official WhatsApp or email to receive payment instructions. After payment, send your proof of payment with your booking reference." },
+  { keys: ["pay on the website", "pay online", "website payment", "card payment"], answer: "The website currently records booking requests but does not process payments. Payment instructions are provided through the official Berwa Photo Hub WhatsApp or business email." },
+  { keys: ["payment proof", "proof of payment", "send proof", "receipt"], answer: "Send your payment proof to our official WhatsApp at +250 786 339 597 or email berwasbusinessgroup@gmail.com. Include your booking reference so the team can match the payment to your booking." },
   { keys: ["location", "where"], answer: `Berwa Photo Hub is located at ${brand.location}.` },
   { keys: ["indoor", "studio"], answer: `Indoor packages: Bronze 10,000 RWF, Silver 25,000 RWF, Gold 45,000 RWF.` },
   { keys: ["outdoor"], answer: `Outdoor packages: Bronze 50,000 RWF, Silver 70,000 RWF, Gold 100,000 RWF.` },
   { keys: ["wedding"], answer: `Wedding packages: Basic 500,000 RWF, Standard 800,000 RWF, Premium 1,000,000 RWF.` },
   { keys: ["event", "coverage"], answer: `Event Coverage packages: Essential 50,000 RWF, Classic 80,000 RWF, Signature 120,000 RWF, Premium 200,000 RWF with highlight video.` },
-  { keys: ["book", "booking"], answer: "Use the Book Now page, enter your contact, service, package, date, location and payment status. Admin will confirm it." }
+  { keys: ["book", "booking"], answer: "Use the Book Now page, enter your contact, service, package, date and location, then confirm the booking request. The website saves your request first, then gives you WhatsApp and email options for availability confirmation and payment instructions." }
 ];
 
 export async function POST(request: Request) {
