@@ -11,7 +11,7 @@ const publicAnswers = [
   { keys: ["outdoor"], answer: `Outdoor packages: Bronze 50,000 RWF, Silver 70,000 RWF, Gold 100,000 RWF.` },
   { keys: ["wedding"], answer: `Wedding packages: Basic 500,000 RWF, Standard 800,000 RWF, Premium 1,000,000 RWF.` },
   { keys: ["event", "coverage"], answer: `Event Coverage packages: Essential 50,000 RWF, Classic 80,000 RWF, Signature 120,000 RWF, Premium 200,000 RWF with highlight video.` },
-  { keys: ["book", "booking"], answer: "Use the Book Now page, enter your contact, service, package, date and location, then confirm the booking request. The website saves your request first, then gives you WhatsApp and email options for availability confirmation and payment instructions." }
+  { keys: ["book", "booking"], answer: "Use the Book Now page, enter your contact, service, package, date and location, then review the request. The website prepares your booking details so you can send them directly to Berwa Photo Hub by WhatsApp or email for availability confirmation and payment instructions." }
 ];
 
 export async function POST(request: Request) {

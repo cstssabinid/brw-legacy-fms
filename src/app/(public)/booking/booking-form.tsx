@@ -44,6 +44,13 @@ function isRemoteService(serviceName: string) {
   return remoteServiceWords.some((word) => normalized.includes(word));
 }
 
+function createTemporaryBookingReference() {
+  const date = new Date();
+  const stamp = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `BPH-${stamp}-${suffix}`;
+}
+
 export function BookingForm({ services, packages }: { services: string[]; packages: CatalogPackage[] }) {
   const [loading, setLoading] = useState(false);
   const [desiredPackage, setDesiredPackage] = useState("");
@@ -88,15 +95,25 @@ export function BookingForm({ services, packages }: { services: string[]; packag
   async function confirmBooking() {
     if (!review) return;
     setLoading(true);
-    const res = await fetch("/api/bookings", { method: "POST", body: JSON.stringify(review), headers: { "Content-Type": "application/json" } });
-    const data = await res.json();
+    const packageForBooking = packages.find((item) => item.name === review.desiredPackage && item.serviceName === review.desiredService);
+    const preparedBooking: SavedBooking = {
+      bookingReference: createTemporaryBookingReference(),
+      clientFullName: review.fullName,
+      clientPhone: review.phone,
+      clientEmail: review.email || null,
+      serviceName: review.desiredService,
+      packageName: review.desiredPackage || null,
+      packagePrice: packageForBooking?.price ?? null,
+      bookingDate: review.bookingDate,
+      bookingTime: review.bookingTime,
+      locationType: review.locationType,
+      location: review.location || null,
+      numberOfPeople: review.numberOfPeople ? Number(review.numberOfPeople) : null,
+      specialRequest: review.specialRequest || null
+    };
     setLoading(false);
-    if (!res.ok) {
-      toast.error(data.error ?? "Your booking could not be saved. Please check your information and try again.");
-      return;
-    }
-    setSavedBooking(data.booking);
-    toast.success("Booking request received");
+    setSavedBooking(preparedBooking);
+    toast.success("Booking details prepared");
   }
 
   async function copyBookingDetails() {
@@ -113,9 +130,9 @@ export function BookingForm({ services, packages }: { services: string[]; packag
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-1 text-[var(--gold)]" size={30} />
           <div>
-            <p className="text-sm font-black uppercase text-[var(--gold)]">Booking Request Received</p>
-            <h2 className="mt-1 text-2xl font-black">Your booking request has been recorded successfully.</h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">Please continue with Berwa Photo Hub on WhatsApp or email to confirm availability and receive payment instructions.</p>
+            <p className="text-sm font-black uppercase text-[var(--gold)]">Booking Details Prepared</p>
+            <h2 className="mt-1 text-2xl font-black">Send your booking request directly to Berwa Photo Hub.</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">This website has not saved your booking. Use WhatsApp or email below to send the details to Berwa Photo Hub for availability confirmation and payment instructions.</p>
           </div>
         </div>
         <div className="rounded-lg border border-[var(--border)] p-4">
@@ -163,7 +180,7 @@ export function BookingForm({ services, packages }: { services: string[]; packag
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <button className="btn" type="button" onClick={() => setReview(null)}><Pencil size={18} /> Edit Booking Details</button>
-          <button className="btn btn-primary" type="button" disabled={loading} onClick={confirmBooking}>{loading ? "Saving..." : "Confirm Booking"}</button>
+          <button className="btn btn-primary" type="button" disabled={loading} onClick={confirmBooking}>{loading ? "Preparing..." : "Prepare WhatsApp & Email"}</button>
         </div>
       </section>
     );
@@ -226,7 +243,7 @@ export function BookingForm({ services, packages }: { services: string[]; packag
       {remoteRequest && <input type="hidden" name="numberOfPeople" value="" />}
       <textarea className="input min-h-32" name="specialRequest" placeholder={remoteRequest ? "Describe the service you need, links, files to prepare, or account/application details" : "Special request or additional information"} />
       <div className="rounded-lg border border-[var(--border)] bg-[var(--soft)] p-4 text-sm text-[var(--muted)]">
-        Payments are not processed directly through this website. Payment instructions are provided after booking confirmation through the official Berwa Photo Hub WhatsApp contact or business email.
+        This website will not save your booking for now. Your booking details are prepared so you can send them directly through the official Berwa Photo Hub WhatsApp contact or business email.
       </div>
       <button className="btn btn-primary" disabled={loading}>Review Booking Details</button>
     </form>
