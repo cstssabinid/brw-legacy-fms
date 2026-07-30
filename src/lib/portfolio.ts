@@ -13,6 +13,19 @@ export type PortfolioCategory = {
 const imageSet = (folder: string, prefix: string, count: number) =>
   Array.from({ length: count }, (_, index) => `/portfolio/${folder}/${prefix}-${index + 1}.jpg`);
 
+export function getPackageImage(category: "Indoor" | "Outdoor" | "Wedding" | "Event" | "Studio", index: number) {
+  const imagesByCategory = {
+    Indoor: imageSet("studio", "studio", 44),
+    Outdoor: imageSet("outdoor", "outdoor", 15),
+    Wedding: imageSet("weddings", "wedding", 4),
+    Event: imageSet("events", "event", 8),
+    Studio: imageSet("studio", "studio", 44)
+  } satisfies Record<"Indoor" | "Outdoor" | "Wedding" | "Event" | "Studio", string[]>;
+
+  const images = imagesByCategory[category];
+  return images[index % images.length] ?? "/portfolio/studio/studio-1.jpg";
+}
+
 export const portfolioCategories: PortfolioCategory[] = [
   {
     id: "studio-portraits",

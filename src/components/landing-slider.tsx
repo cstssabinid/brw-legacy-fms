@@ -7,25 +7,46 @@ import { brand } from "@/lib/brand";
 
 const slides = [
   {
-    image: "/studio-blog/indoor-package-1.jpg",
-    eyebrow: "Studio portrait sessions",
-    title: "Berwa Photo Hub",
-    copy: "Comfortable guided sessions, polished retouching, and portraits that still feel natural.",
+    image: "/studio-blog/berwa_photo_hub_18.jpg",
+    eyebrow: "Portrait Highlights",
+    title: "Authentic Studio Portraits",
+    copy: "Natural expressions and professional lighting for headshots and personal portraits.",
     cta: "Book Studio Session"
   },
   {
-    image: "/studio-blog/outdoor-package-1.jpg",
-    eyebrow: "Outdoor photography",
-    title: "Fresh Kigali Stories",
-    copy: "Location planning, relaxed direction, and crisp images for personal, family, and business profiles.",
-    cta: "Book Outdoor Shoot"
+    image: "/studio-blog/berwa_photo_hub_215.jpg",
+    eyebrow: "Event Moments",
+    title: "Joyful Celebrations",
+    copy: "Vibrant event coverage capturing candid and group moments.",
+    cta: "View Event Packages"
   },
   {
-    image: "/studio-blog/wedding-package-1.jpg",
-    eyebrow: "Wedding coverage",
-    title: "Your Day, Fully Covered",
-    copy: "Albums, video highlights, online galleries, and elegant delivery from preparation to celebration.",
+    image: "/studio-blog/berwa_photo_hub_228.jpg",
+    eyebrow: "Ceremony Details",
+    title: "Elegant Wedding Coverage",
+    copy: "Candid and styled moments from preparation through reception.",
     cta: "View Wedding Packages"
+  },
+  {
+    image: "/studio-blog/berwa_photo_hub_231.jpg",
+    eyebrow: "Portrait Sessions",
+    title: "Professional Studio Stories",
+    copy: "Clean, polished portraits designed to reflect your personality.",
+    cta: "Book Studio Session"
+  },
+  {
+    image: "/studio-blog/berwa_photo_hub_362.jpg",
+    eyebrow: "Wedding Ceremonies",
+    title: "Timeless Moments",
+    copy: "Elegant storytelling for your most important day.",
+    cta: "View Wedding Packages"
+  },
+  {
+    image: "/studio-blog/berwa_photo_hub_366.jpg",
+    eyebrow: "Group Celebrations",
+    title: "Vibrant Event Coverage",
+    copy: "Capture the energy of every gathering with lively, colorful imagery.",
+    cta: "View Event Packages"
   }
 ];
 

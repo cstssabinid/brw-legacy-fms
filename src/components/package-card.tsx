@@ -13,7 +13,7 @@ export function PackageCard({
   item,
   premium,
   category = "Studio",
-  imageSrc = "/brand/studio-placeholder.svg",
+  imageSrc = "/portfolio/studio/studio-1.jpg",
   showBookingAction = true
 }: {
   item: PackageCardItem;

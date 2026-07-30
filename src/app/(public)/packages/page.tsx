@@ -2,11 +2,9 @@ import { ClientFeedback } from "@/components/client-feedback";
 import { PackageCard } from "@/components/package-card";
 import { brand } from "@/lib/brand";
 import { getActiveCatalogPackages, packagesByType } from "@/lib/catalog";
-import { portfolioCategories } from "@/lib/portfolio";
+import { getPackageImage } from "@/lib/portfolio";
 
 export const dynamic = "force-dynamic";
-
-const eventPackageImages = portfolioCategories.find((category) => category.id === "event-coverage")?.images ?? [];
 
 export default async function PackagesPage() {
   const grouped = packagesByType(await getActiveCatalogPackages());
@@ -26,7 +24,7 @@ export default async function PackagesPage() {
               key={`i-${item.name}`}
               item={item}
               category="Indoor"
-              imageSrc={`/studio-blog/indoor-package-${index + 1}.jpg`}
+              imageSrc={getPackageImage("Indoor", index)}
               premium={item.name === "GOLD"}
             />
           ))}
@@ -41,7 +39,7 @@ export default async function PackagesPage() {
               key={`o-${item.name}`}
               item={item}
               category="Outdoor"
-              imageSrc={`/studio-blog/outdoor-package-${index + 1}.jpg`}
+              imageSrc={getPackageImage("Outdoor", index)}
               premium={item.name === "GOLD"}
             />
           ))}
@@ -56,7 +54,7 @@ export default async function PackagesPage() {
               key={`e-${item.name}`}
               item={item}
               category="Event"
-              imageSrc={eventPackageImages[index % eventPackageImages.length] ?? "/brand/outdoor-placeholder.svg"}
+              imageSrc={getPackageImage("Event", index)}
               premium={item.level === "Platinum"}
             />
           ))}

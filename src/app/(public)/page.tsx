@@ -5,11 +5,9 @@ import { PackageCard } from "@/components/package-card";
 import { PortfolioShowcase } from "@/components/portfolio-showcase";
 import { WeddingContractModal } from "@/components/wedding-contract-modal";
 import { getActiveCatalogPackages, getActiveServices, packagesByType } from "@/lib/catalog";
-import { portfolioCategories } from "@/lib/portfolio";
+import { getPackageImage } from "@/lib/portfolio";
 
 export const dynamic = "force-dynamic";
-
-const eventPackageImages = portfolioCategories.find((category) => category.id === "event-coverage")?.images ?? [];
 
 export default async function HomePage() {
   const [services, catalogPackages] = await Promise.all([getActiveServices(), getActiveCatalogPackages()]);
@@ -47,7 +45,7 @@ export default async function HomePage() {
                 key={`indoor-${item.name}`}
                 item={item}
                 category="Indoor"
-                imageSrc={`/studio-blog/indoor-package-${index + 1}.jpg`}
+                imageSrc={getPackageImage("Indoor", index)}
                 premium={item.name === "GOLD"}
               />
             ))}
@@ -67,7 +65,7 @@ export default async function HomePage() {
               key={item.name}
               item={item}
               category="Event"
-              imageSrc={eventPackageImages[index % eventPackageImages.length] ?? "/brand/outdoor-placeholder.svg"}
+              imageSrc={getPackageImage("Event", index)}
               premium={item.level === "Platinum"}
             />
           ))}
@@ -85,7 +83,7 @@ export default async function HomePage() {
               key={item.name}
               item={item}
               category="Wedding"
-              imageSrc={`/studio-blog/wedding-package-${index + 1}.jpg`}
+              imageSrc={item.name === "BASIC PACKAGE" ? "/portfolio/weddings/berwa_photo_hub_362.jpg" : getPackageImage("Wedding", index)}
               premium={item.name.includes("PREMIUM")}
             />
           ))}

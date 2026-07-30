@@ -124,7 +124,7 @@ export function PortfolioImageSlider({ category, active }: { category: Portfolio
           className={`absolute inset-0 h-full w-full object-cover object-[center_24%] transition duration-1000 group-hover:scale-105 ${
             index === active ? "opacity-100" : "scale-[1.05] opacity-0"
           }`}
-          onError={(event) => { event.currentTarget.src = "/studio-blog/indoor-package-1.jpg"; }}
+          onError={(event) => { event.currentTarget.src = "/portfolio/studio/studio-1.jpg"; }}
         />
       ))}
     </div>

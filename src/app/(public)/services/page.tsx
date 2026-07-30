@@ -1,5 +1,6 @@
 import { PackageCard } from "@/components/package-card";
 import { getActiveCatalogPackages, getActiveServices, packagesByType } from "@/lib/catalog";
+import { getPackageImage } from "@/lib/portfolio";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export default async function ServicesPage() {
               key={item.name}
               item={item}
               category="Event"
-              imageSrc="/brand/outdoor-placeholder.svg"
+              imageSrc={getPackageImage("Event", 0)}
               premium={item.level === "Platinum"}
             />
           ))}

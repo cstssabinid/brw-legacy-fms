@@ -1,6 +1,7 @@
 import { PackageCard } from "@/components/package-card";
 import { WeddingContractModal } from "@/components/wedding-contract-modal";
 import { packages } from "@/lib/brand";
+import { getPackageImage } from "@/lib/portfolio";
 
 export default function WeddingPage() {
   return (
@@ -16,7 +17,7 @@ export default function WeddingPage() {
             key={item.name}
             item={item}
             category="Wedding"
-            imageSrc={`/studio-blog/wedding-package-${index + 1}.jpg`}
+            imageSrc={item.name === "BASIC PACKAGE" ? "/portfolio/weddings/berwa_photo_hub_362.jpg" : getPackageImage("Wedding", index)}
             premium={item.name.includes("PREMIUM")}
           />
         ))}
