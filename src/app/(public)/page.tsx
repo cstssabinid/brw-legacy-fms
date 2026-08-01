@@ -45,7 +45,7 @@ export default async function HomePage() {
                 key={`indoor-${item.name}`}
                 item={item}
                 category="Indoor"
-                imageSrc={getPackageImage("Indoor", index)}
+                imageSrc={item.name === "SILVER" ? "/portfolio/studio/berwa_photo_hub_18.jpg" : getPackageImage("Indoor", index)}
                 premium={item.name === "GOLD"}
               />
             ))}
@@ -65,7 +65,7 @@ export default async function HomePage() {
               key={item.name}
               item={item}
               category="Event"
-              imageSrc={getPackageImage("Event", index)}
+              imageSrc={item.level === "Platinum" ? "/portfolio/events/berwa_photo_hub_366.jpg" : getPackageImage("Event", index)}
               premium={item.level === "Platinum"}
             />
           ))}

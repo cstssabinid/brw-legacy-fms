@@ -24,7 +24,7 @@ export default async function PackagesPage() {
               key={`i-${item.name}`}
               item={item}
               category="Indoor"
-              imageSrc={getPackageImage("Indoor", index)}
+              imageSrc={item.name === "SILVER" ? "/portfolio/studio/berwa_photo_hub_18.jpg" : getPackageImage("Indoor", index)}
               premium={item.name === "GOLD"}
             />
           ))}

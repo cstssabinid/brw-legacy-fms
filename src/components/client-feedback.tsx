@@ -12,21 +12,21 @@ type FeedbackItem = {
 
 const defaultFeedback: FeedbackItem[] = [
   {
-    name: "Aline M.",
-    session: "Indoor Gold Session",
-    quote: "The team guided every pose and the final retouched photos looked polished without losing my natural look.",
-    image: "/studio-blog/client-feedback-1.jpg"
+    name: "Grace U.",
+    session: "Wedding Coverage",
+    quote: "Our album, highlight video, and online gallery were organized beautifully. The booking process was simple from start to finish.",
+    image: "/studio-blog/berwa_photo_hub_228.jpg"
   },
   {
     name: "Kevin N.",
     session: "Outdoor Silver Session",
     quote: "They helped us choose the location, kept time well, and delivered photos we could use for family and business profiles.",
-    image: "/studio-blog/client-feedback-2.jpg"
+    image: "/studio-blog/client-feedback-1.jpg"
   },
   {
-    name: "Grace U.",
-    session: "Wedding Coverage",
-    quote: "Our album, highlight video, and online gallery were organized beautifully. The booking process was simple from start to finish.",
+    name: "Aline M.",
+    session: "Indoor Gold Session",
+    quote: "The team guided every pose and the final retouched photos looked polished without losing my natural look.",
     image: "/studio-blog/client-feedback-3.jpg"
   }
 ];
