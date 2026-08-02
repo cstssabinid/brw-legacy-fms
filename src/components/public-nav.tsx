@@ -11,6 +11,7 @@ const links = [
   ["Home", "/"],
   ["Services", "/services"],
   ["Packages", "/packages"],
+  ["Photo Frames", "/wooden-photo-frames"],
   ["Wedding", "/wedding"],
   ["Gallery", "/gallery"],
   ["Book Now", "/booking"],

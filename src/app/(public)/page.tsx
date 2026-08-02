@@ -65,7 +65,7 @@ export default async function HomePage() {
               key={item.name}
               item={item}
               category="Event"
-              imageSrc={item.level === "Platinum" ? "/portfolio/events/berwa_photo_hub_366.jpg" : getPackageImage("Event", index)}
+              imageSrc={item.level === "Platinum" ? "/portfolio/events/berwa_photo_hub_344.jpg" : getPackageImage("Event", index)}
               premium={item.level === "Platinum"}
             />
           ))}

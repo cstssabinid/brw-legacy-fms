@@ -34,6 +34,7 @@ const socialLinks = [
 const footerLinks = [
   ["Services", "/services"],
   ["Packages", "/packages"],
+  ["Photo Frames", "/wooden-photo-frames"],
   ["Gallery", "/gallery"],
   ["Booking", "/booking"]
 ];

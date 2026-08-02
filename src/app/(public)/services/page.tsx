@@ -28,7 +28,7 @@ export default async function ServicesPage() {
               key={item.name}
               item={item}
               category="Event"
-              imageSrc={item.level === "Platinum" ? "/portfolio/events/berwa_photo_hub_366.jpg" : getPackageImage("Event", 0)}
+              imageSrc={item.level === "Platinum" ? "/portfolio/events/berwa_photo_hub_344.jpg" : getPackageImage("Event", 0)}
               premium={item.level === "Platinum"}
             />
           ))}
