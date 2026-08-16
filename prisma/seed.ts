@@ -1,7 +1,37 @@
 import { PrismaClient, Role, ServiceType, PackageType, TransactionType, CategoryScope, AccountType, PeriodStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
+
+const emailSchema = z.string().trim().email();
+const passwordSchema = z
+  .string()
+  .min(16, "must contain at least 16 characters")
+  .regex(/[a-z]/, "must contain a lowercase letter")
+  .regex(/[A-Z]/, "must contain an uppercase letter")
+  .regex(/[0-9]/, "must contain a number")
+  .regex(/[^A-Za-z0-9]/, "must contain a symbol");
+
+function requiredEnvironmentValue(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for database seeding.`);
+  return value;
+}
+
+function securePassword(name: string) {
+  const result = passwordSchema.safeParse(requiredEnvironmentValue(name));
+  if (!result.success) {
+    throw new Error(`${name} ${result.error.issues.map((issue) => issue.message).join(", ")}.`);
+  }
+  return result.data;
+}
+
+function seedEmail(name: string, fallback: string) {
+  const result = emailSchema.safeParse(process.env[name] || fallback);
+  if (!result.success) throw new Error(`${name} must be a valid email address.`);
+  return result.data.toLowerCase();
+}
 
 const indoorPackages = [
   { name: "BRONZE", price: 10000, includes: ["5 retouched professional pictures"] },
@@ -70,19 +100,37 @@ const expenseCategories = [
 ];
 
 async function main() {
-  const passwordHash = await bcrypt.hash("Admin@12345", 12);
+  const adminEmail = seedEmail("SEED_ADMIN_EMAIL", "admin@brwlegacy.rw");
+  const adminPasswordHash = await bcrypt.hash(securePassword("SEED_ADMIN_PASSWORD"), 12);
   const admin = await prisma.user.upsert({
-    where: { email: "admin@brwlegacy.rw" },
+    where: { email: adminEmail },
     update: {},
-    create: { name: "BRW Legacy Admin", email: "admin@brwlegacy.rw", phone: "+250786339597", passwordHash, role: Role.SUPER_ADMIN }
+    create: {
+      name: process.env.SEED_ADMIN_NAME?.trim() || "BRW Legacy Admin",
+      email: adminEmail,
+      phone: process.env.SEED_ADMIN_PHONE?.trim() || "+250786339597",
+      passwordHash: adminPasswordHash,
+      role: Role.SUPER_ADMIN
+    }
   });
 
-  const workerPassword = await bcrypt.hash("Worker@12345", 12);
-  const worker = await prisma.user.upsert({
-    where: { email: "worker@brwlegacy.rw" },
-    update: {},
-    create: { name: "Berwa Photographer", email: "worker@brwlegacy.rw", phone: "+250782784599", passwordHash: workerPassword, role: Role.WORKER }
-  });
+  const workerPassword = process.env.SEED_WORKER_PASSWORD?.trim();
+  let workerEmail: string | undefined;
+  if (workerPassword) {
+    workerEmail = seedEmail("SEED_WORKER_EMAIL", "worker@brwlegacy.rw");
+    const workerPasswordHash = await bcrypt.hash(securePassword("SEED_WORKER_PASSWORD"), 12);
+    await prisma.user.upsert({
+      where: { email: workerEmail },
+      update: {},
+      create: {
+        name: process.env.SEED_WORKER_NAME?.trim() || "Berwa Photographer",
+        email: workerEmail,
+        phone: process.env.SEED_WORKER_PHONE?.trim() || "+250782784599",
+        passwordHash: workerPasswordHash,
+        role: Role.WORKER
+      }
+    });
+  }
 
   const createdServices = new Map<string, string>();
   await prisma.service.updateMany({ where: { name: "Events Coverage" }, data: { active: false } });
@@ -151,7 +199,7 @@ async function main() {
   }
 
   const now = new Date();
-  const period = await prisma.monthlyPeriod.upsert({
+  await prisma.monthlyPeriod.upsert({
     where: { month_year: { month: now.getMonth() + 1, year: now.getFullYear() } },
     update: {},
     create: {
@@ -162,19 +210,6 @@ async function main() {
       openingBalance: 0,
       status: PeriodStatus.OPEN
     }
-  });
-
-  const client = await prisma.client.create({ data: { fullName: "Sample Client", phone: "+250783128500", email: "client@example.com" } });
-  const incomeCategory = await prisma.category.findFirstOrThrow({ where: { type: TransactionType.INCOME } });
-  const expenseCategory = await prisma.category.findFirstOrThrow({ where: { name: "Printing materials" } });
-  const cash = await prisma.account.findFirstOrThrow({ where: { type: AccountType.CASH } });
-
-  await prisma.transaction.createMany({
-    data: [
-      { periodId: period.id, type: TransactionType.INCOME, categoryId: incomeCategory.id, clientId: client.id, accountId: cash.id, paymentMethod: "Cash", amount: 25000, transactionDate: now, transactionTime: "09:00", description: "Sample indoor studio income", status: "CONFIRMED", recordedById: worker.id, confirmedById: admin.id, confirmedAt: now },
-      { periodId: period.id, type: TransactionType.EXPENSE, categoryId: expenseCategory.id, accountId: cash.id, paymentMethod: "Cash", amount: 8000, transactionDate: now, transactionTime: "14:00", description: "Sample printing material expense", status: "CONFIRMED", recordedById: admin.id, confirmedById: admin.id, confirmedAt: now }
-    ],
-    skipDuplicates: true
   });
 
   await prisma.settings.upsert({
@@ -192,14 +227,20 @@ async function main() {
     }
   });
 
-  await prisma.galleryImage.createMany({
-    data: [
-      { title: "Studio Portrait Placeholder", imageUrl: "/brand/studio-placeholder.svg", category: "Studio" },
-      { title: "Wedding Story Placeholder", imageUrl: "/brand/wedding-placeholder.svg", category: "Wedding" },
-      { title: "Outdoor Session Placeholder", imageUrl: "/brand/outdoor-placeholder.svg", category: "Outdoor" }
-    ],
-    skipDuplicates: true
-  });
+  for (const image of [
+    { id: "seed-gallery-studio", title: "Studio Portrait Placeholder", imageUrl: "/brand/studio-placeholder.svg", category: "Studio" },
+    { id: "seed-gallery-wedding", title: "Wedding Story Placeholder", imageUrl: "/brand/wedding-placeholder.svg", category: "Wedding" },
+    { id: "seed-gallery-outdoor", title: "Outdoor Session Placeholder", imageUrl: "/brand/outdoor-placeholder.svg", category: "Outdoor" }
+  ]) {
+    await prisma.galleryImage.upsert({ where: { id: image.id }, update: image, create: image });
+  }
+
+  console.log(`Database seed completed for administrator ${admin.email}${workerEmail ? ` and worker ${workerEmail}` : ""}.`);
 }
 
-main().finally(async () => prisma.$disconnect());
+main()
+  .catch((error) => {
+    console.error(error instanceof Error ? error.message : "Database seed failed.");
+    process.exitCode = 1;
+  })
+  .finally(async () => prisma.$disconnect());

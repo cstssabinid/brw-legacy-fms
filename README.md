@@ -42,12 +42,20 @@ NEXTAUTH_SECRET="replace-with-a-long-random-secret"
 NEXTAUTH_URL="http://localhost:3000"
 UPLOAD_PROVIDER="local"
 AI_API_KEY="optional_for_future_berwa_bot"
+RUN_DATABASE_BOOTSTRAP="false"
+SEED_ADMIN_EMAIL="admin@brwlegacy.rw"
+SEED_ADMIN_PASSWORD="use-a-password-manager-generated-value"
+SEED_WORKER_EMAIL="worker@brwlegacy.rw"
+SEED_WORKER_PASSWORD="use-a-different-password-manager-generated-value"
 ```
 
-## Local Test Accounts
+`SEED_ADMIN_PASSWORD` is required whenever the seed runs. It must contain at least 16 characters, including uppercase, lowercase, number and symbol characters. `SEED_WORKER_PASSWORD` is optional; omit it to skip creating the worker account. Never commit real values.
 
-- Admin: `admin@brwlegacy.rw` / `Admin@12345`
-- Worker: `worker@brwlegacy.rw` / `Worker@12345`
+## Local Seed Accounts
+
+- Administrator email defaults to `admin@brwlegacy.rw`.
+- Worker email defaults to `worker@brwlegacy.rw` when `SEED_WORKER_PASSWORD` is supplied.
+- Passwords come only from the private seed environment variables above. There are no source-controlled default passwords.
 
 ## Database
 
@@ -63,8 +71,20 @@ If `npm run db:push` shows `P1001: Can't reach database server at localhost:5432
 For production migrations:
 
 ```bash
-npx prisma migrate dev --name initial
+npx prisma migrate deploy
 ```
+
+### One-time Vercel/Neon bootstrap
+
+For a new empty Neon database connected through Vercel:
+
+1. Add `RUN_DATABASE_BOOTSTRAP=true` to the Production environment.
+2. Add `SEED_ADMIN_PASSWORD` as a sensitive Production variable using a password-manager-generated value.
+3. Optionally add a different sensitive `SEED_WORKER_PASSWORD` to create the initial worker.
+4. Redeploy Production. The guarded Vercel build applies the committed Prisma migrations and idempotent BRW seed data before building the app.
+5. After the deployment is Ready and database routes are verified, remove `RUN_DATABASE_BOOTSTRAP`, `SEED_ADMIN_PASSWORD`, and `SEED_WORKER_PASSWORD`, then redeploy once more.
+
+The migration history contains a complete baseline for a fresh PostgreSQL database. Future schema changes should be created with `prisma migrate dev` during development and applied in production with `prisma migrate deploy`.
 
 ## Brand Assets
 
