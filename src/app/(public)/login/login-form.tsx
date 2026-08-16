@@ -29,10 +29,10 @@ export function LoginForm() {
 
   return (
     <form className="card grid gap-4 p-6" onSubmit={submit}>
-      <input className="input" name="email" type="email" placeholder="Email" defaultValue="admin@brwlegacy.rw" required />
-      <input className="input" name="password" type="password" placeholder="Password" defaultValue="Admin@12345" required />
+      <input className="input" name="email" type="email" placeholder="Email" autoComplete="username" required />
+      <input className="input" name="password" type="password" placeholder="Password" autoComplete="current-password" required />
       <button className="btn btn-primary" disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
-      <p className="text-sm text-[var(--muted)]">Local admin: admin@brwlegacy.rw / Admin@12345. Worker: worker@brwlegacy.rw / Worker@12345.</p>
+      <p className="text-sm text-[var(--muted)]">Use the private administrator or worker credentials configured for this system.</p>
     </form>
   );
 }
