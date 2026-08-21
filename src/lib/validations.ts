@@ -30,7 +30,6 @@ export const bookingPaymentSchema = z.object({
 export const transactionSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE", "TRANSFER", "ADJUSTMENT"]),
   categoryName: z.string().min(1),
-  accountName: z.string().min(1),
   paymentMethod: z.string().min(1),
   amount: z.coerce.number().positive("Amount must be positive"),
   transactionDate: z.string().min(1),

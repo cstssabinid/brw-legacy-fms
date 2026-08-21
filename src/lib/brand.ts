@@ -63,5 +63,4 @@ export const expenseCategories = [
   "Family support", "Emergency expenses", "Other expenses"
 ];
 
-export const paymentMethods = ["Cash", "MTN MoMo", "Bank", "Cheque", "Card", "Other"];
-export const accounts = ["Cash", "MTN Momo", "Bank", "Cheque"];
+export const paymentMethods = ["Cash", "MTN Momo", "Bank", "Cheque", "Card", "Other"];

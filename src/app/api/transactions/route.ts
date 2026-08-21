@@ -32,10 +32,19 @@ export async function POST(request: Request) {
   if (!period || period.status === "CLOSED") return NextResponse.json({ error: "Cannot edit a closed or missing month" }, { status: 400 });
 
   const category = await prisma.category.findFirst({ where: { name: parsed.data.categoryName, type: parsed.data.type } });
-  const account = await prisma.account.findFirst({ where: { name: parsed.data.accountName } });
+  const accountNameByPaymentMethod: Record<string, string> = {
+    Cash: "Cash",
+    "MTN Momo": "MTN Momo",
+    Bank: "Bank",
+    Cheque: "Cheque",
+    Card: "Bank",
+    Other: "Bank"
+  };
+  const accountName = accountNameByPaymentMethod[parsed.data.paymentMethod];
+  const account = accountName ? await prisma.account.findFirst({ where: { name: accountName } }) : null;
   const service = parsed.data.serviceName ? await prisma.service.findFirst({ where: { name: parsed.data.serviceName } }) : null;
   const selectedPackage = parsed.data.packageName ? await prisma.package.findFirst({ where: { name: parsed.data.packageName, serviceId: service?.id } }) : null;
-  if (!category || !account) return NextResponse.json({ error: "Invalid category or account" }, { status: 400 });
+  if (!category || !account) return NextResponse.json({ error: "Invalid category or payment method" }, { status: 400 });
 
   const transaction = await prisma.transaction.create({
     data: {

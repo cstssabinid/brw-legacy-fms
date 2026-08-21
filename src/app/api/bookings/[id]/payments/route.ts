@@ -28,10 +28,10 @@ function categoryNameForService(serviceName: string) {
 
 function accountNameForMethod(method: string) {
   const normalized = method.toLowerCase();
-  if (normalized.includes("momo") || normalized.includes("mtn")) return "MTN MoMo";
+  if (normalized.includes("momo") || normalized.includes("mtn")) return "MTN Momo";
   if (normalized.includes("bank")) return "Bank";
   if (normalized.includes("cheque") || normalized.includes("check")) return "Cheque";
-  return "Cash at Hand";
+  return "Cash";
 }
 
 function paymentStatus(total: number, paid: number) {

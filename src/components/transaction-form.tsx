@@ -5,13 +5,6 @@ import { toast } from "sonner";
 import { expenseCategories, incomeCategories, paymentMethods } from "@/lib/brand";
 import type { CatalogPackage } from "@/lib/catalog";
 
-const accountOptions = [
-  { value: "Cash", label: "Cash" },
-  { value: "MTN Momo", label: "MTN Momo" },
-  { value: "Bank", label: "Bank" },
-  { value: "Cheque", label: "Cheque" }
-];
-
 export function TransactionForm({ type = "INCOME", services = [], packages = [] }: { type?: "INCOME" | "EXPENSE"; services?: string[]; packages?: CatalogPackage[] }) {
   const [loading, setLoading] = useState(false);
   const [serviceName, setServiceName] = useState("");
@@ -31,12 +24,11 @@ export function TransactionForm({ type = "INCOME", services = [], packages = [] 
   return (
     <form className="card grid gap-4 p-5" onSubmit={submit}>
       <div className="grid gap-4 md:grid-cols-2 mobile-stack">
-        <select className="input" name="categoryName" required>{categories.map((item) => <option key={item}>{item}</option>)}</select>
-        <select className="input" name="accountName" required>{accountOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-        <select className="input" name="paymentMethod" required>{paymentMethods.map((item) => <option key={item}>{item}</option>)}</select>
-        <input className="input" name="amount" type="number" min="1" placeholder="Amount in RWF" required />
-        <input className="input" name="transactionDate" type="date" required />
-        <input className="input" name="transactionTime" type="time" required />
+        <label className="grid gap-2"><span className="text-sm font-semibold text-[var(--muted)]">Category</span><select className="input" name="categoryName" required>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label className="grid gap-2"><span className="text-sm font-semibold text-[var(--muted)]">Payment method</span><select className="input" name="paymentMethod" required>{paymentMethods.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label className="grid gap-2"><span className="text-sm font-semibold text-[var(--muted)]">Amount (RWF)</span><input className="input" name="amount" type="number" min="1" placeholder="Amount" required /></label>
+        <label className="grid gap-2"><span className="text-sm font-semibold text-[var(--muted)]">Date</span><input className="input" name="transactionDate" type="date" required /></label>
+        <label className="grid gap-2"><span className="text-sm font-semibold text-[var(--muted)]">Time</span><input className="input" name="transactionTime" type="time" required /></label>
         {type === "INCOME" && (
           <>
             <select className="input" name="serviceName" value={serviceName} onChange={(event) => setServiceName(event.target.value)}>
