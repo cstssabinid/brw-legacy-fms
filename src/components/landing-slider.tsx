@@ -7,6 +7,13 @@ import { brand } from "@/lib/brand";
 
 const slides = [
   {
+    image: "/studio-blog/landing%20page.jpg",
+    eyebrow: "Studio High Vibe",
+    title: "Own Your Spotlight",
+    copy: "Bold energy, polished light, and a studio set made for portraits that turn heads.",
+    cta: "Book Studio Session"
+  },
+  {
     image: "/studio-blog/berwa_photo_hub_18.jpg",
     eyebrow: "Portrait Highlights",
     title: "Authentic Studio Portraits",
@@ -70,7 +77,7 @@ export function LandingSlider() {
   const slideTotal = String(slides.length).padStart(2, "0");
 
   return (
-    <section className="relative min-h-[92vh] overflow-hidden bg-[#05070b] text-white">
+    <section className="landing-hero relative min-h-[92vh] overflow-hidden bg-[#05070b] text-white">
       <div className="absolute inset-0">
         {slides.map((item, index) => (
           <img
@@ -87,14 +94,14 @@ export function LandingSlider() {
       <div className="absolute inset-y-0 right-0 hidden w-1/4 border-l border-white/10 bg-black/10 backdrop-blur-[1px] lg:block" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05070b] to-transparent" />
 
-      <div className="page-shell relative flex min-h-[92vh] flex-col justify-center py-20">
+      <div className="landing-hero-inner page-shell relative flex min-h-[92vh] flex-col justify-center py-20">
         <div className="max-w-4xl">
-          <p className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-[var(--gold)]">
+          <p className="landing-hero-eyebrow mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-[var(--gold)]">
             <Sparkles size={18} /> {slide.eyebrow}
           </p>
-          <h1 className="display-serif text-6xl leading-[0.95] md:text-8xl">{slide.title}</h1>
-          <p className="mt-6 max-w-2xl text-xl leading-8 text-white/82">{slide.copy}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <h1 className="landing-hero-title display-serif text-6xl leading-[0.95] md:text-8xl">{slide.title}</h1>
+          <p className="landing-hero-copy mt-6 max-w-2xl text-xl leading-8 text-white/82">{slide.copy}</p>
+          <div className="landing-hero-actions mt-8 flex flex-wrap gap-3">
             <Link className="btn btn-gold" href={slide.cta.includes("Wedding") ? "/wedding" : "/booking"}>
               <CalendarCheck size={18} /> {slide.cta}
             </Link>
