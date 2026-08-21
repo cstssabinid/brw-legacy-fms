@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
 const adminRoles = ["ADMIN", "SUPER_ADMIN", "MANAGER"];
-const workerRoles = ["WORKER", "ADMIN", "SUPER_ADMIN", "MANAGER"];
+const workerRoles = ["WORKER", "CASHIER", "ADMIN", "SUPER_ADMIN", "MANAGER"];
 
 export default withAuth(
   function middleware(req) {
