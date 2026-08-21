@@ -12,6 +12,12 @@ type FeedbackItem = {
 
 const defaultFeedback: FeedbackItem[] = [
   {
+    name: "Starlit",
+    session: "Studio Portrait Session",
+    quote: "The studio had such a high vibe. The lighting, energy, and creative direction made every frame feel special. I felt confident, celebrated, and completely myself.",
+    image: "/studio-blog/feedback%2001.jpg"
+  },
+  {
     name: "Grace U.",
     session: "Wedding Coverage",
     quote: "Our album, highlight video, and online gallery were organized beautifully. The booking process was simple from start to finish.",
