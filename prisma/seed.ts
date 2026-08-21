@@ -104,7 +104,7 @@ async function main() {
   const adminPasswordHash = await bcrypt.hash(securePassword("SEED_ADMIN_PASSWORD"), 12);
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: { passwordHash: adminPasswordHash, status: "ACTIVE" },
     create: {
       name: process.env.SEED_ADMIN_NAME?.trim() || "BRW Legacy Admin",
       email: adminEmail,
@@ -190,11 +190,16 @@ async function main() {
     });
   }
 
-  for (const [name, type] of [["Cash at Hand", AccountType.CASH], ["MTN MoMo", AccountType.MOMO], ["Bank", AccountType.BANK], ["Cheque", AccountType.CHEQUE]] as const) {
+  for (const [id, name, type] of [
+    ["cash-at-hand", "Cash", AccountType.CASH],
+    ["mtn-momo", "MTN Momo", AccountType.MOMO],
+    ["bank", "Bank", AccountType.BANK],
+    ["cheque", "Cheque", AccountType.CHEQUE]
+  ] as const) {
     await prisma.account.upsert({
-      where: { id: name.toLowerCase().replaceAll(" ", "-") },
-      update: {},
-      create: { id: name.toLowerCase().replaceAll(" ", "-"), name, type, openingBalance: 0, currentBalance: 0 }
+      where: { id },
+      update: { name, type },
+      create: { id, name, type, openingBalance: 0, currentBalance: 0 }
     });
   }
 

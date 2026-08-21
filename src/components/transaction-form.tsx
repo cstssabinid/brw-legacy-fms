@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { accounts, expenseCategories, incomeCategories, paymentMethods } from "@/lib/brand";
+import { expenseCategories, incomeCategories, paymentMethods } from "@/lib/brand";
 import type { CatalogPackage } from "@/lib/catalog";
+
+const accountOptions = [
+  { value: "Cash", label: "Cash" },
+  { value: "MTN Momo", label: "MTN Momo" },
+  { value: "Bank", label: "Bank" },
+  { value: "Cheque", label: "Cheque" }
+];
 
 export function TransactionForm({ type = "INCOME", services = [], packages = [] }: { type?: "INCOME" | "EXPENSE"; services?: string[]; packages?: CatalogPackage[] }) {
   const [loading, setLoading] = useState(false);
@@ -25,7 +32,7 @@ export function TransactionForm({ type = "INCOME", services = [], packages = [] 
     <form className="card grid gap-4 p-5" onSubmit={submit}>
       <div className="grid gap-4 md:grid-cols-2 mobile-stack">
         <select className="input" name="categoryName" required>{categories.map((item) => <option key={item}>{item}</option>)}</select>
-        <select className="input" name="accountName" required>{accounts.map((item) => <option key={item === "Cash at hand" ? "Cash at Hand" : item.replace(" account", "")}>{item === "Cash at hand" ? "Cash at Hand" : item.replace(" account", "")}</option>)}</select>
+        <select className="input" name="accountName" required>{accountOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
         <select className="input" name="paymentMethod" required>{paymentMethods.map((item) => <option key={item}>{item}</option>)}</select>
         <input className="input" name="amount" type="number" min="1" placeholder="Amount in RWF" required />
         <input className="input" name="transactionDate" type="date" required />

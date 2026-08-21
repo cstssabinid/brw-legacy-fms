@@ -20,12 +20,32 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
-        const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-        if (!user || user.status !== "ACTIVE") return null;
-        const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!isValid) return null;
-        return { id: user.id, name: user.name, email: user.email, role: user.role };
+        if (!parsed.success) {
+          console.warn("Login rejected: invalid credential format");
+          return null;
+        }
+
+        const email = parsed.data.email.trim().toLowerCase();
+        try {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user) {
+            console.warn(`Login rejected: user not found for ${email}`);
+            return null;
+          }
+          if (user.status !== "ACTIVE") {
+            console.warn(`Login rejected: inactive user ${email}`);
+            return null;
+          }
+          const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+          if (!isValid) {
+            console.warn(`Login rejected: password mismatch for ${email}`);
+            return null;
+          }
+          return { id: user.id, name: user.name, email: user.email, role: user.role };
+        } catch (error) {
+          console.error("Login rejected: database lookup failed", error);
+          return null;
+        }
       }
     })
   ],
