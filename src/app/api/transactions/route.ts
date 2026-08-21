@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionSchema } from "@/lib/validations";
+import { AccountType } from "@prisma/client";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -32,16 +33,16 @@ export async function POST(request: Request) {
   if (!period || period.status === "CLOSED") return NextResponse.json({ error: "Cannot edit a closed or missing month" }, { status: 400 });
 
   const category = await prisma.category.findFirst({ where: { name: parsed.data.categoryName, type: parsed.data.type } });
-  const accountNameByPaymentMethod: Record<string, string> = {
-    Cash: "Cash",
-    "MTN Momo": "MTN Momo",
-    Bank: "Bank",
-    Cheque: "Cheque",
-    Card: "Bank",
-    Other: "Bank"
+  const accountTypeByPaymentMethod: Record<string, AccountType> = {
+    Cash: AccountType.CASH,
+    "MTN Momo": AccountType.MOMO,
+    Bank: AccountType.BANK,
+    Cheque: AccountType.CHEQUE,
+    Card: AccountType.BANK,
+    Other: AccountType.BANK
   };
-  const accountName = accountNameByPaymentMethod[parsed.data.paymentMethod];
-  const account = accountName ? await prisma.account.findFirst({ where: { name: accountName } }) : null;
+  const accountType = accountTypeByPaymentMethod[parsed.data.paymentMethod];
+  const account = accountType ? await prisma.account.findFirst({ where: { type: accountType } }) : null;
   const service = parsed.data.serviceName ? await prisma.service.findFirst({ where: { name: parsed.data.serviceName } }) : null;
   const selectedPackage = parsed.data.packageName ? await prisma.package.findFirst({ where: { name: parsed.data.packageName, serviceId: service?.id } }) : null;
   if (!category || !account) return NextResponse.json({ error: "Invalid category or payment method" }, { status: 400 });

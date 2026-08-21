@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { TransactionType } from "@prisma/client";
+import { AccountType, TransactionType } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { bookingPaymentSchema } from "@/lib/validations";
@@ -26,12 +26,12 @@ function categoryNameForService(serviceName: string) {
   return incomeCategoryByService.find((item) => normalized.includes(item.key))?.category ?? "Studio service earnings";
 }
 
-function accountNameForMethod(method: string) {
+function accountTypeForMethod(method: string) {
   const normalized = method.toLowerCase();
-  if (normalized.includes("momo") || normalized.includes("mtn")) return "MTN Momo";
-  if (normalized.includes("bank")) return "Bank";
-  if (normalized.includes("cheque") || normalized.includes("check")) return "Cheque";
-  return "Cash";
+  if (normalized.includes("momo") || normalized.includes("mtn")) return AccountType.MOMO;
+  if (normalized.includes("bank")) return AccountType.BANK;
+  if (normalized.includes("cheque") || normalized.includes("check")) return AccountType.CHEQUE;
+  return AccountType.CASH;
 }
 
 function paymentStatus(total: number, paid: number) {
@@ -64,7 +64,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!period || period.status === "CLOSED") throw new Error("Cannot record payment in a closed or missing month");
 
     const category = await tx.category.findFirst({ where: { name: categoryNameForService(booking.service.name), type: TransactionType.INCOME } });
-    const account = await tx.account.findFirst({ where: { name: accountNameForMethod(parsed.data.paymentMethod) } });
+    const account = await tx.account.findFirst({ where: { type: accountTypeForMethod(parsed.data.paymentMethod) } });
     if (!category || !account) throw new Error("Income category or account is missing");
 
     const transaction = await tx.transaction.create({
