@@ -15,6 +15,19 @@ const createUserSchema = z.object({
   role: z.enum(["CASHIER", "WORKER"])
 });
 
+function databaseErrorDetails(error: unknown) {
+  return {
+    code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : "",
+    message: error instanceof Error ? error.message : ""
+  };
+}
+
+function isMissingCashierEnum(error: unknown) {
+  const { message } = databaseErrorDetails(error);
+  const normalized = message.toLowerCase();
+  return normalized.includes("cashier") && normalized.includes("enum");
+}
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session || !isAccountAdminRole(session.user.role)) {
@@ -39,23 +52,27 @@ export async function POST(request: Request) {
     const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
     if (existing) return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
 
-    const user = await prisma.user.create({
-      data: {
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone || undefined,
-        passwordHash: await bcrypt.hash(parsed.data.password, 12),
-        role: parsed.data.role as Role,
-        status: "ACTIVE"
-      },
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+    const createUser = () => prisma.user.create({
+      data: { name: parsed.data.name, email: parsed.data.email, phone: parsed.data.phone || undefined, passwordHash, role: parsed.data.role as Role, status: "ACTIVE" },
       select: { id: true, name: true, email: true, role: true, status: true }
     });
+
+    let user;
+    try {
+      user = await createUser();
+    } catch (createError) {
+      if (parsed.data.role !== "CASHIER" || !isMissingCashierEnum(createError)) throw createError;
+
+      console.warn("CASHIER enum is missing; applying the idempotent role repair before retrying user creation");
+      await prisma.$executeRaw`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'CASHIER'`;
+      user = await createUser();
+    }
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
     console.error("User account creation failed", error);
-    const code = error instanceof Prisma.PrismaClientKnownRequestError ? error.code : "";
-    const message = error instanceof Error ? error.message : "";
+    const { code, message } = databaseErrorDetails(error);
 
     if (code === "P2002") {
       return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
@@ -70,7 +87,7 @@ export async function POST(request: Request) {
       message.includes("CASHIER")
     ) {
       return NextResponse.json(
-        { error: "The database update for restricted staff accounts has not been applied yet. Redeploy the latest version, then try again." },
+        { error: "The restricted staff database update could not be completed automatically. Please contact the system administrator." },
         { status: 503 }
       );
     }

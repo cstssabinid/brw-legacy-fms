@@ -14,9 +14,9 @@ function runScript(name) {
 }
 
 const bootstrapEnabled = process.env.RUN_DATABASE_BOOTSTRAP === "true";
-const productionDeployment = process.env.VERCEL_ENV === "production";
+const hostedDeployment = process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV);
 
-if (productionDeployment || bootstrapEnabled) {
+if (hostedDeployment || bootstrapEnabled) {
   console.log("Applying committed database migrations.");
   runScript("prisma:deploy");
 }
@@ -26,4 +26,4 @@ if (bootstrapEnabled) {
   runScript("prisma:seed");
 }
 
-runScript("build");
+runScript("next:build");
