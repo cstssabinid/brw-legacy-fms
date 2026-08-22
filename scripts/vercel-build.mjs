@@ -19,6 +19,7 @@ const hostedDeployment = process.env.VERCEL === "1" || Boolean(process.env.VERCE
 if (hostedDeployment || bootstrapEnabled) {
   console.log("Applying committed database migrations.");
   runScript("prisma:deploy");
+  runScript("prisma:ensure-cashier-role");
 }
 
 if (bootstrapEnabled) {

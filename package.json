@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "prisma:ensure-cashier-role": "node scripts/ensure-cashier-role.mjs",
     "prisma:seed": "tsx prisma/seed.ts",
     "db:push": "prisma db push",
     "db:bootstrap": "prisma migrate deploy && prisma db seed"
