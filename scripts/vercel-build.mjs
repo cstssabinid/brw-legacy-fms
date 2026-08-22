@@ -13,9 +13,17 @@ function runScript(name) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-if (process.env.RUN_DATABASE_BOOTSTRAP === "true") {
-  console.log("One-time database bootstrap enabled: applying the Prisma schema and required BRW seed data.");
-  runScript("db:bootstrap");
+const bootstrapEnabled = process.env.RUN_DATABASE_BOOTSTRAP === "true";
+const productionDeployment = process.env.VERCEL_ENV === "production";
+
+if (productionDeployment || bootstrapEnabled) {
+  console.log("Applying committed database migrations.");
+  runScript("prisma:deploy");
+}
+
+if (bootstrapEnabled) {
+  console.log("One-time database bootstrap enabled: adding the required BRW seed data.");
+  runScript("prisma:seed");
 }
 
 runScript("build");

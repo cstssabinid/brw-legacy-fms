@@ -1,9 +1,10 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { defaultPortalPathForRole } from "@/lib/permissions";
 
 export function LoginForm() {
   const router = useRouter();
@@ -13,18 +14,26 @@ export function LoginForm() {
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    const form = new FormData(event.currentTarget);
-    const result = await signIn("credentials", {
-      email: form.get("email"),
-      password: form.get("password"),
-      redirect: false
-    });
-    setLoading(false);
-    if (result?.error) {
-      toast.error("Unauthorized access or invalid credentials");
-      return;
+    try {
+      const form = new FormData(event.currentTarget);
+      const result = await signIn("credentials", {
+        email: form.get("email"),
+        password: form.get("password"),
+        redirect: false
+      });
+      if (result?.error) {
+        toast.error("Unauthorized access or invalid credentials");
+        return;
+      }
+
+      const session = await getSession();
+      router.push(params.get("callbackUrl") ?? defaultPortalPathForRole(session?.user.role));
+      router.refresh();
+    } catch {
+      toast.error("Login could not be completed. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    router.push(params.get("callbackUrl") ?? "/admin/dashboard");
   }
 
   return (

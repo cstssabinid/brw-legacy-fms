@@ -22,8 +22,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ answer: "I cannot share private financial data in public visitor mode." });
   }
 
-  if (role === "WORKER" && text.includes("close month")) {
-    return NextResponse.json({ answer: "Only admin can close a month. Workers can record income, upload proof, view assigned bookings and submit reports." });
+  if (["WORKER", "CASHIER"].includes(role) && text.includes("close month")) {
+    return NextResponse.json({ answer: "Only an administrator can perform the final month close. Staff can record information and review the open accounting period." });
   }
 
   if (role === "ADMIN" || role === "SUPER_ADMIN") {

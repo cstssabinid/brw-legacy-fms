@@ -42,7 +42,9 @@ function paymentStatus(total: number, paid: number) {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+  if (!session || !["CASHIER", "MANAGER", "ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+  }
 
   const body = await request.json();
   const parsed = bookingPaymentSchema.safeParse(body);

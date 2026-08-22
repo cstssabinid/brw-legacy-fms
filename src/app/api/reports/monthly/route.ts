@@ -1,7 +1,15 @@
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessAdminPath } from "@/lib/permissions";
 
 export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || !canAccessAdminPath(session.user.role, "/admin/monthly-reports")) {
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const periodId = searchParams.get("periodId");
   if (!periodId) return NextResponse.json({ error: "Missing periodId" }, { status: 400 });

@@ -4,10 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionSchema } from "@/lib/validations";
 import { AccountType } from "@prisma/client";
+import { canEnterOperationalData } from "@/lib/permissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+  if (!session || !canEnterOperationalData(session.user.role)) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
   const isWorker = ["WORKER", "CASHIER"].includes(session.user.role);
   const transactions = await prisma.transaction.findMany({
     where: isWorker ? { recordedById: session.user.id } : undefined,
@@ -20,7 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+  if (!session || !canEnterOperationalData(session.user.role)) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
   const body = await request.json();
   const parsed = transactionSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Missing required field", issues: parsed.error.flatten() }, { status: 400 });

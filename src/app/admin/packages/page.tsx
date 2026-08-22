@@ -1,6 +1,10 @@
 import { PackageType } from "@prisma/client";
+import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isFullAdminRole } from "@/lib/permissions";
+import { requireAdminSection } from "@/lib/server-permissions";
 import { rwf } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +37,7 @@ async function refreshPackageViews() {
 
 async function createPackage(formData: FormData) {
   "use server";
+  await requireAdminSection("/admin/packages");
   const serviceId = String(formData.get("serviceId"));
   const name = String(formData.get("name"));
   const level = String(formData.get("level") ?? "");
@@ -48,6 +53,7 @@ async function createPackage(formData: FormData) {
 
 async function updatePackage(formData: FormData) {
   "use server";
+  await requireAdminSection("/admin/packages");
   const id = String(formData.get("id"));
   const serviceId = String(formData.get("serviceId"));
   const name = String(formData.get("name"));
@@ -65,6 +71,10 @@ async function updatePackage(formData: FormData) {
 
 async function setPackageActive(formData: FormData) {
   "use server";
+  const session = await getServerSession(authOptions);
+  if (!session || !isFullAdminRole(session.user.role)) {
+    throw new Error("Only administrators can change package availability");
+  }
   const id = String(formData.get("id"));
   const active = String(formData.get("active")) === "true";
   await prisma.package.update({ where: { id }, data: { active } });
@@ -72,10 +82,12 @@ async function setPackageActive(formData: FormData) {
 }
 
 export default async function AdminPackagesPage() {
-  const [services, packageRows] = await Promise.all([
+  const [session, services, packageRows] = await Promise.all([
+    getServerSession(authOptions),
     prisma.service.findMany({ orderBy: { name: "asc" } }),
     prisma.package.findMany({ include: { service: true }, orderBy: [{ packageType: "asc" }, { price: "asc" }] })
   ]);
+  const canChangeAvailability = isFullAdminRole(session?.user.role);
 
   return (
     <div className="grid gap-6">
@@ -115,11 +127,13 @@ export default async function AdminPackagesPage() {
                   <h3 className="text-lg font-black">{item.name}</h3>
                   <p className="text-sm text-[var(--muted)]">{item.service.name} | {item.packageType} | {rwf(item.price.toString())} | {item.active ? "Active" : "Inactive"}</p>
                 </div>
-                <form action={setPackageActive}>
-                  <input type="hidden" name="id" value={item.id} />
-                  <input type="hidden" name="active" value={String(!item.active)} />
-                  <button className={item.active ? "btn bg-black text-white" : "btn btn-gold"}>{item.active ? "Deactivate" : "Activate"}</button>
-                </form>
+                {canChangeAvailability && (
+                  <form action={setPackageActive}>
+                    <input type="hidden" name="id" value={item.id} />
+                    <input type="hidden" name="active" value={String(!item.active)} />
+                    <button className={item.active ? "btn bg-black text-white" : "btn btn-gold"}>{item.active ? "Deactivate" : "Activate"}</button>
+                  </form>
+                )}
               </div>
               <form action={updatePackage} className="grid gap-4">
                 <input type="hidden" name="id" value={item.id} />
