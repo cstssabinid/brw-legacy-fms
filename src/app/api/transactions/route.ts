@@ -4,12 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionSchema } from "@/lib/validations";
 import { AccountType } from "@prisma/client";
-import { canEnterOperationalData } from "@/lib/permissions";
+import { canEnterOperationalData, RESTRICTED_STAFF_ROLE } from "@/lib/permissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || !canEnterOperationalData(session.user.role)) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
-  const isWorker = ["WORKER", "CASHIER"].includes(session.user.role);
+  const isWorker = ["WORKER", RESTRICTED_STAFF_ROLE].includes(session.user.role);
   const transactions = await prisma.transaction.findMany({
     where: isWorker ? { recordedById: session.user.id } : undefined,
     include: { category: true, account: true, service: true, package: true, recordedBy: true },
@@ -63,9 +63,9 @@ export async function POST(request: Request) {
       description: parsed.data.description,
       comments: parsed.data.comments,
       recordedById: session.user.id,
-      status: ["ADMIN", "SUPER_ADMIN", "MANAGER"].includes(session.user.role) ? "CONFIRMED" : "PENDING",
-      confirmedById: ["ADMIN", "SUPER_ADMIN", "MANAGER"].includes(session.user.role) ? session.user.id : undefined,
-      confirmedAt: ["ADMIN", "SUPER_ADMIN", "MANAGER"].includes(session.user.role) ? new Date() : undefined
+      status: ["ADMIN", "SUPER_ADMIN"].includes(session.user.role) ? "CONFIRMED" : "PENDING",
+      confirmedById: ["ADMIN", "SUPER_ADMIN"].includes(session.user.role) ? session.user.id : undefined,
+      confirmedAt: ["ADMIN", "SUPER_ADMIN"].includes(session.user.role) ? new Date() : undefined
     }
   });
 

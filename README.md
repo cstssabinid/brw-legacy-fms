@@ -84,7 +84,7 @@ For a new empty Neon database connected through Vercel:
 4. Redeploy Production. Every Vercel build applies committed Prisma migrations; this one-time flag also adds the idempotent BRW seed data before building the app.
 5. After the deployment is Ready and database routes are verified, remove `RUN_DATABASE_BOOTSTRAP`, `SEED_ADMIN_PASSWORD`, and `SEED_WORKER_PASSWORD`, then redeploy once more.
 
-The migration history contains a complete baseline for a fresh PostgreSQL database. Future schema changes should be created with `prisma migrate dev` during development. Both `build` and `vercel-build` use the migration-aware build script, which automatically runs `prisma migrate deploy` in Vercel environments and explicitly verifies the required `CASHIER` enum value before building. Local builds skip database migration unless `RUN_DATABASE_BOOTSTRAP=true` is explicitly set.
+The migration history contains a complete baseline for a fresh PostgreSQL database. Future schema changes should be created with `prisma migrate dev` during development. Both `build` and `vercel-build` use the migration-aware build script, which automatically runs `prisma migrate deploy` in Vercel environments. Local builds skip database migration unless `RUN_DATABASE_BOOTSTRAP=true` is explicitly set. Restricted operational staff accounts use the existing database `MANAGER` value, with their limited permissions enforced by the application policy.
 
 ## Brand Assets
 

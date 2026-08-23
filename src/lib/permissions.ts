@@ -1,6 +1,8 @@
-export const FULL_ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER"] as const;
+export const FULL_ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"] as const;
 export const ACCOUNT_ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"] as const;
-export const RESTRICTED_STAFF_ROLE = "CASHIER";
+// MANAGER already exists in every deployed database. In the application it is
+// intentionally treated as the restricted operational staff role.
+export const RESTRICTED_STAFF_ROLE = "MANAGER";
 
 export const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard", restrictedStaff: true },

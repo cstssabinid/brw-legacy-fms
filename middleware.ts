@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { canAccessAdminPath, defaultPortalPathForRole } from "./src/lib/permissions";
 
-const workerRoles = ["WORKER", "ADMIN", "SUPER_ADMIN", "MANAGER"];
+const workerRoles = ["WORKER", "ADMIN", "SUPER_ADMIN"];
 
 export default withAuth(
   function middleware(req) {

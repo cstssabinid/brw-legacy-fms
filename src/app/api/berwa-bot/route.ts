@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ answer: "I cannot share private financial data in public visitor mode." });
   }
 
-  if (["WORKER", "CASHIER"].includes(role) && text.includes("close month")) {
+  if (["WORKER", "MANAGER"].includes(role) && text.includes("close month")) {
     return NextResponse.json({ answer: "Only an administrator can perform the final month close. Staff can record information and review the open accounting period." });
   }
 

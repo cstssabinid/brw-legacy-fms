@@ -12,7 +12,7 @@ const createUserSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
   phone: z.string().trim().max(40).optional(),
   password: z.string().min(16),
-  role: z.enum(["CASHIER", "WORKER"])
+  role: z.enum(["MANAGER", "WORKER"])
 });
 
 function databaseErrorDetails(error: unknown) {
@@ -20,12 +20,6 @@ function databaseErrorDetails(error: unknown) {
     code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : "",
     message: error instanceof Error ? error.message : ""
   };
-}
-
-function isMissingCashierEnum(error: unknown) {
-  const { message } = databaseErrorDetails(error);
-  const normalized = message.toLowerCase();
-  return normalized.includes("cashier") && normalized.includes("enum");
 }
 
 export async function POST(request: Request) {
@@ -53,21 +47,10 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-    const createUser = () => prisma.user.create({
+    const user = await prisma.user.create({
       data: { name: parsed.data.name, email: parsed.data.email, phone: parsed.data.phone || undefined, passwordHash, role: parsed.data.role as Role, status: "ACTIVE" },
       select: { id: true, name: true, email: true, role: true, status: true }
     });
-
-    let user;
-    try {
-      user = await createUser();
-    } catch (createError) {
-      if (parsed.data.role !== "CASHIER" || !isMissingCashierEnum(createError)) throw createError;
-
-      console.warn("CASHIER enum is missing; applying the idempotent role repair before retrying user creation");
-      await prisma.$executeRaw`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'CASHIER'`;
-      user = await createUser();
-    }
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
@@ -83,11 +66,10 @@ export async function POST(request: Request) {
     if (
       code === "P2021" ||
       code === "P2022" ||
-      message.includes("invalid input value for enum") ||
-      message.includes("CASHIER")
+      message.includes("invalid input value for enum")
     ) {
       return NextResponse.json(
-        { error: "The restricted staff database update could not be completed automatically. Please contact the system administrator." },
+        { error: "The user database schema is unavailable. Please contact the system administrator." },
         { status: 503 }
       );
     }
