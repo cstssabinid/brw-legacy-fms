@@ -49,5 +49,7 @@ export const monthClosingSchema = z.object({
   bank: monthlyBalance,
   cheque: monthlyBalance,
   other: monthlyBalance,
-  reason: z.string().trim().max(1200).optional()
+  reason: z.string().trim().max(1200).optional(),
+  closingDate: z.string().min(1, "Closing date is required"),
+  openingDate: z.string().min(1, "Opening date is required")
 });

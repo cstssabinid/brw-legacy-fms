@@ -315,6 +315,8 @@ model MonthlyPeriod {
   year                   Int
   startDate              DateTime
   endDate                DateTime
+  closingDate            DateTime?
+  openingDate            DateTime?
   openingBalance         Decimal                @default(0) @db.Decimal(12, 2)
   expectedClosingBalance Decimal                @default(0) @db.Decimal(12, 2)
   countedClosingBalance  Decimal                @default(0) @db.Decimal(12, 2)

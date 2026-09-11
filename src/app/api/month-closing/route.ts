@@ -124,6 +124,7 @@ export async function POST(request: Request) {
           status: "CLOSED",
           closedById: session.user.id,
           closedAt: new Date(),
+          closingDate: new Date(parsed.data.closingDate),
           adminNotes: reason
         }
       });
@@ -141,6 +142,7 @@ export async function POST(request: Request) {
               startDate: nextStart,
               endDate: nextEnd,
               openingBalance: new Prisma.Decimal(counted),
+              openingDate: new Date(parsed.data.openingDate),
               status: "OPEN",
               expectedClosingBalance: new Prisma.Decimal(0),
               countedClosingBalance: new Prisma.Decimal(0),
@@ -157,6 +159,7 @@ export async function POST(request: Request) {
               startDate: nextStart,
               endDate: nextEnd,
               openingBalance: new Prisma.Decimal(counted),
+              openingDate: new Date(parsed.data.openingDate),
               status: "OPEN"
             }
           });

@@ -35,7 +35,7 @@ export default async function MonthClosingPage() {
           )}
         </div>
       )}
-      {period && canCloseMonth && <MonthClosingForm periodId={period.id} periodLabel={monthLabel(period.month, period.year)} openingBalance={rwf(period.openingBalance.toString())} cashCountTotal={period.cashCounts.reduce((sum, item) => sum + Number(item.total), 0)} />}
+      {period && canCloseMonth && <MonthClosingForm periodId={period.id} periodLabel={monthLabel(period.month, period.year)} year={period.year} month={period.month} openingBalance={rwf(period.openingBalance.toString())} cashCountTotal={period.cashCounts.reduce((sum, item) => sum + Number(item.total), 0)} />}
       {period && !canCloseMonth && (
         <div className="card grid gap-2 p-5">
           <p>Status: {period.status}</p>
