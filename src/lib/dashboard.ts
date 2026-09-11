@@ -9,6 +9,10 @@ export async function getDashboardStats() {
     where: { status: { in: ["OPEN", "UNDER_REVIEW"] } },
     orderBy: [{ year: "desc" }, { month: "desc" }]
   });
+  const closedPeriod = await prisma.monthlyPeriod.findFirst({
+    where: { status: "CLOSED" },
+    orderBy: [{ year: "desc" }, { month: "desc" }]
+  });
   const currentPeriod = { periodId: period?.id ?? "" };
   const operatingIncome = { ...confirmed, ...currentPeriod, type: TransactionType.INCOME, isOpeningBalance: false };
 
@@ -67,6 +71,7 @@ export async function getDashboardStats() {
     pendingBookings,
     pendingTransactions,
     period,
+    closedPeriod,
     topIncome: serviceIncomeRows[0] ? serviceName(serviceIncomeRows[0].serviceId) : categoryName(topIncome[0]?.categoryId),
     topExpense: categoryName(topExpense[0]?.categoryId),
     serviceIncome: serviceIncomeRows.map((row) => ({ name: serviceName(row.serviceId), value: Number(row._sum.amount ?? 0) }))
