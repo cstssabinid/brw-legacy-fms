@@ -26,4 +26,5 @@ if (bootstrapEnabled) {
   runScript("prisma:seed");
 }
 
+runScript("prisma:generate");
 runScript("next:build");

@@ -1,12 +1,8 @@
-import { randomUUID } from "crypto";
-import { mkdir, readFile, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
-
-const feedbackFile = path.join(process.cwd(), "data", "client-feedback.json");
 
 const feedbackSchema = z.object({
   name: z.string().trim().max(80).optional(),
@@ -15,46 +11,51 @@ const feedbackSchema = z.object({
   image: z.string().startsWith("data:image/").max(2_000_000)
 });
 
-type StoredFeedback = z.infer<typeof feedbackSchema> & {
-  id: string;
-  createdAt: string;
-};
-
-async function readFeedback() {
+export async function GET() {
   try {
-    const file = await readFile(feedbackFile, "utf8");
-    const items = JSON.parse(file);
-    return Array.isArray(items) ? (items as StoredFeedback[]) : [];
-  } catch {
-    return [];
+    const feedback = await prisma.feedback.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 24
+    });
+    return NextResponse.json({ feedback });
+  } catch (error) {
+    console.error("Failed to fetch feedback", error);
+    return NextResponse.json({ feedback: [] }, { status: 200 });
   }
 }
 
-async function writeFeedback(items: StoredFeedback[]) {
-  await mkdir(path.dirname(feedbackFile), { recursive: true });
-  await writeFile(feedbackFile, JSON.stringify(items, null, 2));
-}
-
-export async function GET() {
-  const feedback = await readFeedback();
-  return NextResponse.json({ feedback });
-}
-
 export async function POST(request: Request) {
-  const body = await request.json();
-  const parsed = feedbackSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Comment and picture are required" }, { status: 400 });
+  try {
+    const body = await request.json();
+    const parsed = feedbackSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Comment and picture are required" },
+        { status: 400 }
+      );
+    }
 
-  const item: StoredFeedback = {
-    id: randomUUID(),
-    name: parsed.data.name || "Client",
-    session: parsed.data.session || "Berwa Photo Hub service",
-    quote: parsed.data.quote,
-    image: parsed.data.image,
-    createdAt: new Date().toISOString()
-  };
-  const feedback = [item, ...(await readFeedback())].slice(0, 24);
-  await writeFeedback(feedback);
+    const feedback = await prisma.feedback.create({
+      data: {
+        name: parsed.data.name || "Client",
+        session: parsed.data.session || "Berwa Photo Hub service",
+        quote: parsed.data.quote,
+        image: parsed.data.image
+      }
+    });
 
-  return NextResponse.json({ ok: true, feedback });
+    const allFeedback = await prisma.feedback.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 24
+    });
+
+    return NextResponse.json({ ok: true, feedback: allFeedback });
+  } catch (error) {
+    console.error("Failed to post feedback", error);
+    return NextResponse.json(
+      { error: "Failed to save feedback. Please try again." },
+      { status: 500 }
+    );
+  }
 }
+

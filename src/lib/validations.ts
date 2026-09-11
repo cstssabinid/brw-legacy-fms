@@ -39,3 +39,15 @@ export const transactionSchema = z.object({
   description: z.string().optional(),
   comments: z.string().optional()
 });
+
+const monthlyBalance = z.coerce.number().finite().min(0, "Balances cannot be negative");
+
+export const monthClosingSchema = z.object({
+  periodId: z.string().min(1),
+  cash: monthlyBalance,
+  momo: monthlyBalance,
+  bank: monthlyBalance,
+  cheque: monthlyBalance,
+  other: monthlyBalance,
+  reason: z.string().trim().max(1200).optional()
+});

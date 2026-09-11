@@ -247,42 +247,44 @@ model BookingPayment {
 }
 
 model Transaction {
-  id              String            @id @default(cuid())
-  periodId        String
-  type            TransactionType
-  categoryId      String
-  subcategory     String?
-  serviceId       String?
-  packageId       String?
-  bookingId       String?
-  clientId        String?
-  accountId       String
-  paymentMethod   String
-  amount          Decimal           @db.Decimal(12, 2)
-  currency        String            @default("RWF")
-  transactionDate DateTime
-  transactionTime String
-  description     String?
-  comments        String?
-  attachmentUrl   String?
-  status          TransactionStatus @default(PENDING)
-  recordedById    String
-  confirmedById   String?
-  confirmedAt     DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  period          MonthlyPeriod     @relation(fields: [periodId], references: [id])
-  category        Category          @relation(fields: [categoryId], references: [id])
-  service         Service?          @relation(fields: [serviceId], references: [id])
-  package         Package?          @relation(fields: [packageId], references: [id])
-  booking         Booking?          @relation(fields: [bookingId], references: [id])
-  bookingPayment  BookingPayment?
-  client          Client?           @relation(fields: [clientId], references: [id])
-  account         Account           @relation(fields: [accountId], references: [id])
-  recordedBy      User              @relation("RecordedBy", fields: [recordedById], references: [id])
-  confirmedBy     User?             @relation("ConfirmedBy", fields: [confirmedById], references: [id])
+  id               String            @id @default(cuid())
+  periodId         String
+  type             TransactionType
+  categoryId       String
+  subcategory      String?
+  serviceId        String?
+  packageId        String?
+  bookingId        String?
+  clientId         String?
+  accountId        String
+  paymentMethod    String
+  amount           Decimal           @db.Decimal(12, 2)
+  currency         String            @default("RWF")
+  transactionDate  DateTime
+  transactionTime  String
+  description      String?
+  comments         String?
+  attachmentUrl    String?
+  isOpeningBalance Boolean           @default(false)
+  status           TransactionStatus @default(PENDING)
+  recordedById     String
+  confirmedById    String?
+  confirmedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  period           MonthlyPeriod     @relation(fields: [periodId], references: [id])
+  category         Category          @relation(fields: [categoryId], references: [id])
+  service          Service?          @relation(fields: [serviceId], references: [id])
+  package          Package?          @relation(fields: [packageId], references: [id])
+  booking          Booking?          @relation(fields: [bookingId], references: [id])
+  bookingPayment   BookingPayment?
+  client           Client?           @relation(fields: [clientId], references: [id])
+  account          Account           @relation(fields: [accountId], references: [id])
+  recordedBy       User              @relation("RecordedBy", fields: [recordedById], references: [id])
+  confirmedBy      User?             @relation("ConfirmedBy", fields: [confirmedById], references: [id])
 
   @@index([transactionDate])
+  @@index([periodId])
   @@index([status])
   @@index([type])
 }
@@ -308,28 +310,42 @@ model Account {
 }
 
 model MonthlyPeriod {
-  id                     String          @id @default(cuid())
+  id                     String                 @id @default(cuid())
   month                  Int
   year                   Int
   startDate              DateTime
   endDate                DateTime
-  openingBalance         Decimal         @default(0) @db.Decimal(12, 2)
-  expectedClosingBalance Decimal         @default(0) @db.Decimal(12, 2)
-  countedClosingBalance  Decimal         @default(0) @db.Decimal(12, 2)
-  difference             Decimal         @default(0) @db.Decimal(12, 2)
-  status                 PeriodStatus    @default(OPEN)
+  openingBalance         Decimal                @default(0) @db.Decimal(12, 2)
+  expectedClosingBalance Decimal                @default(0) @db.Decimal(12, 2)
+  countedClosingBalance  Decimal                @default(0) @db.Decimal(12, 2)
+  difference             Decimal                @default(0) @db.Decimal(12, 2)
+  status                 PeriodStatus           @default(OPEN)
   closedById             String?
   closedAt               DateTime?
   adminNotes             String?
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
-  closedBy               User?           @relation(fields: [closedById], references: [id])
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  closedBy               User?                  @relation(fields: [closedById], references: [id])
   reports                MonthlyReport[]
   transactions           Transaction[]
+  accountBalances        PeriodAccountBalance[]
   cashCounts             CashCount[]
   budgets                Budget[]
 
   @@unique([month, year])
+}
+
+model PeriodAccountBalance {
+  id             String        @id @default(cuid())
+  periodId       String
+  accountType    AccountType
+  openingBalance Decimal       @default(0) @db.Decimal(12, 2)
+  closingBalance Decimal       @default(0) @db.Decimal(12, 2)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  period         MonthlyPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, accountType])
 }
 
 model MonthlyReport {
@@ -461,6 +477,15 @@ model Notification {
   link      String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  name      String   @default("Client")
+  session   String   @default("Berwa Photo Hub service")
+  quote     String   @db.Text
+  image     String   @db.Text
+  createdAt DateTime @default(now())
 }
 
 model Settings {

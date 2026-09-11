@@ -47,9 +47,41 @@ SEED_ADMIN_EMAIL="admin@brwlegacy.rw"
 SEED_ADMIN_PASSWORD="use-a-password-manager-generated-value"
 SEED_WORKER_EMAIL="worker@brwlegacy.rw"
 SEED_WORKER_PASSWORD="use-a-different-password-manager-generated-value"
+
+# Email Configuration (Optional - for booking confirmations)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+
+# WhatsApp Configuration (Optional - requires WhatsApp Business API setup)
+WHATSAPP_API_KEY="your-whatsapp-api-key"
+WHATSAPP_API_URL="https://your-whatsapp-provider-api-url"
 ```
 
 `SEED_ADMIN_PASSWORD` is required whenever the seed runs. It must contain at least 16 characters, including uppercase, lowercase, number and symbol characters. `SEED_WORKER_PASSWORD` is optional; omit it to skip creating the worker account. Never commit real values.
+
+### Email Configuration (SMTP)
+
+For automatic booking confirmation emails, configure SMTP:
+
+- **Gmail**: Use [Gmail App Passwords](https://support.google.com/accounts/answer/185833). Set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER=your-email@gmail.com`, `SMTP_PASSWORD=your-16-digit-app-password`.
+- **Other providers**: Use your provider's SMTP settings.
+
+Without SMTP configuration, booking emails are logged as warnings but the system continues to function.
+
+### WhatsApp Configuration
+
+For automatic booking WhatsApp messages, set up one of:
+
+1. **Twilio**: [Twilio WhatsApp Sandbox](https://www.twilio.com/whatsapp)
+2. **WhatsApp Business API**: [Official WhatsApp Business API](https://www.whatsapp.com/business/)
+3. **Notchpay**: [Notchpay WhatsApp Integration](https://notchpay.co)
+
+Configure `WHATSAPP_API_KEY` and `WHATSAPP_API_URL` for your chosen provider.
+
+Without WhatsApp configuration, booking WhatsApp messages are logged as warnings but the system continues to function.
+
 
 ## Local Seed Accounts
 
@@ -110,7 +142,7 @@ Expected Closing Balance = Opening Balance + Confirmed Income - Confirmed Expens
 Difference = Total Counted Balance - Expected Closing Balance
 ```
 
-If there is a difference, a reason is required. Closed months cannot be edited by workers.
+If there is a difference, a reason is required. Closing saves the final balance for Cash, MoMo, Bank, Cheque and Other accounts, then opens the next accounting month with the same total as its opening balance. The carry-forward is recorded as the new month’s first confirmed income entry and shown separately as Opening Balance on the dashboard, so it is never counted as operating income. Closed months cannot be edited by workers; use Transactions by Month or Monthly Reports to review any recorded period independently.
 
 ## Deployment
 

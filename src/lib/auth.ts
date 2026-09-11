@@ -3,10 +3,12 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { userMatchesLoginRole } from "@/lib/login-roles";
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8)
+  password: z.string().min(8),
+  loginRole: z.enum(["ADMIN", "PHOTOGRAPHER", "CASHIER"])
 });
 
 export const authOptions: NextAuthOptions = {
@@ -39,6 +41,10 @@ export const authOptions: NextAuthOptions = {
           const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
           if (!isValid) {
             console.warn(`Login rejected: password mismatch for ${email}`);
+            return null;
+          }
+          if (!userMatchesLoginRole(parsed.data.loginRole, user.role)) {
+            console.warn(`Login rejected: role mismatch for ${email}`);
             return null;
           }
           return { id: user.id, name: user.name, email: user.email, role: user.role };

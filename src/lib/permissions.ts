@@ -1,8 +1,8 @@
 export const FULL_ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"] as const;
 export const ACCOUNT_ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"] as const;
-// MANAGER already exists in every deployed database. In the application it is
-// intentionally treated as the restricted operational staff role.
-export const RESTRICTED_STAFF_ROLE = "MANAGER";
+// MANAGER was previously used for cashier accounts. Keep it supported while
+// new accounts use the explicit CASHIER role.
+export const RESTRICTED_STAFF_ROLES = ["CASHIER", "MANAGER"] as const;
 
 export const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard", restrictedStaff: true },
@@ -33,8 +33,12 @@ export function isAccountAdminRole(role?: string | null) {
   return ACCOUNT_ADMIN_ROLES.includes(role as (typeof ACCOUNT_ADMIN_ROLES)[number]);
 }
 
+export function isRestrictedStaffRole(role?: string | null) {
+  return RESTRICTED_STAFF_ROLES.includes(role as (typeof RESTRICTED_STAFF_ROLES)[number]);
+}
+
 export function hasAdminPortalAccess(role?: string | null) {
-  return role === RESTRICTED_STAFF_ROLE || isFullAdminRole(role);
+  return isRestrictedStaffRole(role) || isFullAdminRole(role);
 }
 
 export function canEnterOperationalData(role?: string | null) {
@@ -43,7 +47,7 @@ export function canEnterOperationalData(role?: string | null) {
 
 export function canAccessAdminPath(role: string | null | undefined, pathname: string) {
   if (isFullAdminRole(role)) return true;
-  if (role !== RESTRICTED_STAFF_ROLE) return false;
+  if (!isRestrictedStaffRole(role)) return false;
   if (pathname === "/admin") return true;
 
   return ADMIN_NAV_ITEMS.some(
@@ -52,7 +56,7 @@ export function canAccessAdminPath(role: string | null | undefined, pathname: st
 }
 
 export function adminNavigationForRole(role?: string | null) {
-  if (role === RESTRICTED_STAFF_ROLE) {
+  if (isRestrictedStaffRole(role)) {
     return ADMIN_NAV_ITEMS.filter((item) => item.restrictedStaff);
   }
   return isFullAdminRole(role) ? ADMIN_NAV_ITEMS : [];

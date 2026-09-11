@@ -12,7 +12,7 @@ const createUserSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
   phone: z.string().trim().max(40).optional(),
   password: z.string().min(16),
-  role: z.enum(["MANAGER", "WORKER"])
+  role: z.enum(["CASHIER", "WORKER"])
 });
 
 function databaseErrorDetails(error: unknown) {

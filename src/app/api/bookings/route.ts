@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { bookingSchema } from "@/lib/validations";
+import { sendBookingConfirmationEmail, sendBookingConfirmationWhatsApp } from "@/lib/notifications";
 
 function clean(value?: string | null) {
   return value?.replace(/\s+/g, " ").trim() || undefined;
@@ -87,7 +88,39 @@ export async function POST(request: Request) {
       return booking;
     });
 
+    const bookingData = {
+      bookingReference: result.bookingReference,
+      clientFullName: result.client.fullName,
+      clientPhone: result.client.phone,
+      clientEmail: result.client.email,
+      serviceName: result.service.name,
+      packageName: result.package?.name,
+      packagePrice: result.package ? Number(result.package.price) : null,
+      bookingDate: result.bookingDate.toISOString(),
+      bookingTime: result.bookingTime,
+      locationType: result.locationType,
+      location: result.location,
+      numberOfPeople: result.numberOfPeople,
+      specialRequest: result.specialRequest
+    };
+
+    // Send notifications asynchronously (don't wait for them)
     try {
+      if (result.client.email) {
+        sendBookingConfirmationEmail(
+          result.client.email,
+          result.client.fullName,
+          result.bookingReference,
+          result.service.name
+        ).catch((err) => console.error("Email notification failed:", err));
+      }
+
+      if (result.client.phone) {
+        sendBookingConfirmationWhatsApp(result.client.phone, bookingData).catch((err) =>
+          console.error("WhatsApp notification failed:", err)
+        );
+      }
+
       const admins = await prisma.user.findMany({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } }, select: { id: true } });
       if (admins.length > 0) {
         await prisma.notification.createMany({
@@ -113,22 +146,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      booking: {
-        bookingReference: result.bookingReference,
-        clientFullName: result.client.fullName,
-        clientPhone: result.client.phone,
-        clientEmail: result.client.email,
-        serviceName: result.service.name,
-        packageName: result.package?.name,
-        packagePrice: result.package ? Number(result.package.price) : null,
-        bookingDate: result.bookingDate.toISOString(),
-        bookingTime: result.bookingTime,
-        locationType: result.locationType,
-        location: result.location,
-        numberOfPeople: result.numberOfPeople,
-        specialRequest: result.specialRequest
-      },
-      message: "Booking request received. Please continue on WhatsApp or email for confirmation and payment instructions."
+      booking: bookingData,
+      message: "Booking request received. Confirmation email/message sent. Our team will review your booking and contact you soon."
     });
   } catch (error) {
     console.error("Booking save failed", error);
@@ -136,3 +155,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: response.error, errorCode: response.errorCode }, { status: response.status });
   }
 }
+

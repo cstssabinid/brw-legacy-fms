@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { AccountType, TransactionType } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
-import { RESTRICTED_STAFF_ROLE } from "@/lib/permissions";
+import { isRestrictedStaffRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { bookingPaymentSchema } from "@/lib/validations";
 
@@ -43,7 +43,7 @@ function paymentStatus(total: number, paid: number) {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session || ![RESTRICTED_STAFF_ROLE, "ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
+  if (!session || !(isRestrictedStaffRole(session.user.role) || ["ADMIN", "SUPER_ADMIN"].includes(session.user.role))) {
     return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
   }
 

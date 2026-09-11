@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LayoutDashboard } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { LogoutButton } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function PortalShell({ children, nav, title }: { children: React.ReactNode; nav: { href: string; label: string }[]; title: string }) {
@@ -22,7 +23,10 @@ export function PortalShell({ children, nav, title }: { children: React.ReactNod
         <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:var(--background)]/88 backdrop-blur">
           <div className="flex items-center justify-between px-4 py-3 md:px-8">
             <h1 className="text-xl font-black">{title}</h1>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LogoutButton />
+            </div>
           </div>
         </header>
         <main className="px-4 py-6 md:px-8">{children}</main>

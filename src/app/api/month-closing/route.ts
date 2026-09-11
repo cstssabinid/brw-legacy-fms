@@ -1,38 +1,235 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { Prisma, TransactionType } from "@prisma/client";
+import { AccountType, Prisma, TransactionType } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { isAccountAdminRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { monthClosingSchema } from "@/lib/validations";
+
+const accountBalanceFields = [
+  { key: "cash", accountType: AccountType.CASH, label: "Cash" },
+  { key: "momo", accountType: AccountType.MOMO, label: "MoMo" },
+  { key: "bank", accountType: AccountType.BANK, label: "Bank" },
+  { key: "cheque", accountType: AccountType.CHEQUE, label: "Cheque" },
+  { key: "other", accountType: AccountType.OTHER, label: "Other" }
+] as const;
+
+class MonthClosingError extends Error {
+  constructor(message: string, readonly status = 400) {
+    super(message);
+  }
+}
+
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || !isAccountAdminRole(session.user.role)) return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
-  const body = await request.json();
-  const periodId = String(body.periodId);
-  const pending = await prisma.transaction.count({ where: { periodId, status: "PENDING" } });
-  if (pending > 0) return NextResponse.json({ error: "Cannot close month because pending records exist" }, { status: 400 });
-  const period = await prisma.monthlyPeriod.findUniqueOrThrow({ where: { id: periodId }, include: { transactions: true } });
-  const income = period.transactions.filter((tx) => tx.type === TransactionType.INCOME && tx.status === "CONFIRMED").reduce((sum, tx) => sum + Number(tx.amount), 0);
-  const expenses = period.transactions.filter((tx) => tx.type === TransactionType.EXPENSE && tx.status === "CONFIRMED").reduce((sum, tx) => sum + Number(tx.amount), 0);
-  const adjustments = period.transactions.filter((tx) => tx.type === TransactionType.ADJUSTMENT && tx.status === "CONFIRMED").reduce((sum, tx) => sum + Number(tx.amount), 0);
-  const expected = Number(period.openingBalance) + income - expenses + adjustments;
-  const counted = ["cash", "momo", "bank", "cheque", "other"].reduce((sum, key) => sum + Number(body[key] ?? 0), 0);
-  const difference = counted - expected;
-  if (difference !== 0 && !String(body.reason ?? "").trim()) return NextResponse.json({ error: "Difference found in month closing. Reason is required." }, { status: 400 });
+  if (!session || !isAccountAdminRole(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+  }
 
-  await prisma.monthlyPeriod.update({
-    where: { id: periodId },
-    data: { expectedClosingBalance: expected, countedClosingBalance: counted, difference, status: "CLOSED", closedById: session.user.id, closedAt: new Date(), adminNotes: body.reason }
-  });
-  await prisma.auditLog.create({ data: { userId: session.user.id, action: "Month closed", entityType: "MonthlyPeriod", entityId: periodId, newValue: { expected, counted, difference } } });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Month-closing details could not be read" }, { status: 400 });
+  }
 
-  const nextStart = new Date(period.year, period.month, 1);
-  await prisma.monthlyPeriod.upsert({
-    where: { month_year: { month: nextStart.getMonth() + 1, year: nextStart.getFullYear() } },
-    update: {},
-    create: { month: nextStart.getMonth() + 1, year: nextStart.getFullYear(), startDate: nextStart, endDate: new Date(nextStart.getFullYear(), nextStart.getMonth() + 1, 0), openingBalance: new Prisma.Decimal(counted), status: "OPEN" }
-  });
+  const parsed = monthClosingSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Enter valid, non-negative closing balances for every account" }, { status: 400 });
+  }
 
-  return NextResponse.json({ ok: true, expected, counted, difference });
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const period = await tx.monthlyPeriod.findUnique({
+        where: { id: parsed.data.periodId },
+        include: {
+          transactions: {
+            select: { type: true, status: true, amount: true, isOpeningBalance: true }
+          }
+        }
+      });
+
+      if (!period) throw new MonthClosingError("The accounting month could not be found", 404);
+      if (period.status === "CLOSED") throw new MonthClosingError("This accounting month has already been closed", 409);
+
+      const pending = period.transactions.filter((transaction) => transaction.status === "PENDING").length;
+      if (pending > 0) throw new MonthClosingError("Cannot close month because pending records exist");
+
+      const confirmedTransactions = period.transactions.filter((transaction) => transaction.status === "CONFIRMED");
+      const operatingIncome = confirmedTransactions
+        .filter((transaction) => transaction.type === TransactionType.INCOME && !transaction.isOpeningBalance)
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+      const expenses = confirmedTransactions
+        .filter((transaction) => transaction.type === TransactionType.EXPENSE)
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+      const adjustments = confirmedTransactions
+        .filter((transaction) => transaction.type === TransactionType.ADJUSTMENT)
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+      const expected = roundCurrency(Number(period.openingBalance) + operatingIncome - expenses + adjustments);
+
+      const closingBalances = accountBalanceFields.map((field) => ({
+        ...field,
+        amount: parsed.data[field.key]
+      }));
+      const counted = roundCurrency(closingBalances.reduce((sum, balance) => sum + balance.amount, 0));
+      const difference = roundCurrency(counted - expected);
+      const reason = parsed.data.reason?.trim() || null;
+
+      if (difference !== 0 && !reason) {
+        throw new MonthClosingError("Difference found in month closing. Reason is required.");
+      }
+
+      const nextStart = new Date(period.year, period.month, 1);
+      const nextMonth = nextStart.getMonth() + 1;
+      const nextYear = nextStart.getFullYear();
+      const nextEnd = new Date(nextYear, nextStart.getMonth() + 1, 0);
+      const existingNextPeriod = await tx.monthlyPeriod.findUnique({
+        where: { month_year: { month: nextMonth, year: nextYear } },
+        include: { transactions: { select: { isOpeningBalance: true } } }
+      });
+
+      if (existingNextPeriod?.status === "CLOSED") {
+        throw new MonthClosingError("The following accounting month is already closed and cannot be reopened", 409);
+      }
+      if (existingNextPeriod?.transactions.some((transaction) => !transaction.isOpeningBalance)) {
+        throw new MonthClosingError("The following accounting month already has transactions and its opening balance cannot be changed", 409);
+      }
+
+      const accounts = await tx.account.findMany({
+        where: { type: { in: accountBalanceFields.map((balance) => balance.accountType) } },
+        select: { id: true, type: true }
+      });
+      const accountIdByType = new Map(accounts.map((account) => [account.type, account.id]));
+      const missingAccounts = closingBalances.filter((balance) => balance.amount > 0 && !accountIdByType.has(balance.accountType));
+      if (missingAccounts.length > 0) {
+        throw new MonthClosingError(`Set up account records for ${missingAccounts.map((balance) => balance.label).join(", ")} before closing this month`);
+      }
+
+      const openingBalanceCategory = await tx.category.upsert({
+        where: { id: "income-opening-balance" },
+        update: { name: "Opening Balance", type: TransactionType.INCOME, scope: "BUSINESS" },
+        create: { id: "income-opening-balance", name: "Opening Balance", type: TransactionType.INCOME, scope: "BUSINESS" }
+      });
+
+      await tx.monthlyPeriod.update({
+        where: { id: period.id },
+        data: {
+          expectedClosingBalance: new Prisma.Decimal(expected),
+          countedClosingBalance: new Prisma.Decimal(counted),
+          difference: new Prisma.Decimal(difference),
+          status: "CLOSED",
+          closedById: session.user.id,
+          closedAt: new Date(),
+          adminNotes: reason
+        }
+      });
+
+      await Promise.all(closingBalances.map((balance) => tx.periodAccountBalance.upsert({
+        where: { periodId_accountType: { periodId: period.id, accountType: balance.accountType } },
+        update: { closingBalance: new Prisma.Decimal(balance.amount) },
+        create: { periodId: period.id, accountType: balance.accountType, closingBalance: new Prisma.Decimal(balance.amount) }
+      })));
+
+      const nextPeriod = existingNextPeriod
+        ? await tx.monthlyPeriod.update({
+            where: { id: existingNextPeriod.id },
+            data: {
+              startDate: nextStart,
+              endDate: nextEnd,
+              openingBalance: new Prisma.Decimal(counted),
+              status: "OPEN",
+              expectedClosingBalance: new Prisma.Decimal(0),
+              countedClosingBalance: new Prisma.Decimal(0),
+              difference: new Prisma.Decimal(0),
+              closedById: null,
+              closedAt: null,
+              adminNotes: null
+            }
+          })
+        : await tx.monthlyPeriod.create({
+            data: {
+              month: nextMonth,
+              year: nextYear,
+              startDate: nextStart,
+              endDate: nextEnd,
+              openingBalance: new Prisma.Decimal(counted),
+              status: "OPEN"
+            }
+          });
+
+      if (existingNextPeriod) {
+        await tx.transaction.deleteMany({ where: { periodId: nextPeriod.id, isOpeningBalance: true } });
+      }
+
+      await Promise.all(closingBalances.map((balance) => tx.periodAccountBalance.upsert({
+        where: { periodId_accountType: { periodId: nextPeriod.id, accountType: balance.accountType } },
+        update: { openingBalance: new Prisma.Decimal(balance.amount), closingBalance: new Prisma.Decimal(0) },
+        create: { periodId: nextPeriod.id, accountType: balance.accountType, openingBalance: new Prisma.Decimal(balance.amount) }
+      })));
+
+      const openingTransactions = closingBalances
+        .filter((balance) => balance.amount > 0)
+        .map((balance) => ({
+          periodId: nextPeriod.id,
+          type: TransactionType.INCOME,
+          categoryId: openingBalanceCategory.id,
+          accountId: accountIdByType.get(balance.accountType)!,
+          paymentMethod: "Opening Balance",
+          amount: new Prisma.Decimal(balance.amount),
+          transactionDate: nextStart,
+          transactionTime: "00:00",
+          description: `Opening balance carried forward from ${period.month}/${period.year}`,
+          comments: `${balance.label} closing balance from the preceding month`,
+          isOpeningBalance: true,
+          status: "CONFIRMED" as const,
+          recordedById: session.user.id,
+          confirmedById: session.user.id,
+          confirmedAt: new Date()
+        }));
+      if (openingTransactions.length > 0) {
+        await tx.transaction.createMany({ data: openingTransactions });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: "Month closed and next month opened",
+          entityType: "MonthlyPeriod",
+          entityId: period.id,
+          newValue: {
+            expectedClosingBalance: expected,
+            countedClosingBalance: counted,
+            difference,
+            closingBalances: Object.fromEntries(closingBalances.map((balance) => [balance.key, balance.amount])),
+            nextPeriod: { id: nextPeriod.id, month: nextPeriod.month, year: nextPeriod.year, openingBalance: counted }
+          },
+          reason: reason ?? undefined
+        }
+      });
+
+      return { expected, counted, difference, nextPeriod };
+    });
+
+    return NextResponse.json({
+      ok: true,
+      expected: result.expected,
+      counted: result.counted,
+      difference: result.difference,
+      nextPeriod: {
+        month: result.nextPeriod.month,
+        year: result.nextPeriod.year,
+        openingBalance: result.counted
+      }
+    });
+  } catch (error) {
+    if (error instanceof MonthClosingError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("Month closing failed", error);
+    return NextResponse.json({ error: "The month could not be closed. Please try again." }, { status: 500 });
+  }
 }

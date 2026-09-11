@@ -4,6 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessAdminPath } from "@/lib/permissions";
 
+function csvCell(value: unknown) {
+  const stringValue = String(value ?? "");
+  return `"${stringValue.replaceAll("\"", "\"\"")}"`;
+}
+
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session || !canAccessAdminPath(session.user.role, "/admin/monthly-reports")) {
@@ -13,9 +18,47 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const periodId = searchParams.get("periodId");
   if (!periodId) return NextResponse.json({ error: "Missing periodId" }, { status: 400 });
-  const transactions = await prisma.transaction.findMany({ where: { periodId }, include: { category: true, account: true, service: true, package: true } });
-  const rows = ["date,type,category,service,package,account,paymentMethod,amount,status,description", ...transactions.map((tx) => [
-    tx.transactionDate.toISOString().slice(0, 10), tx.type, tx.category.name, tx.service?.name ?? "", tx.package?.name ?? "", tx.account.name, tx.paymentMethod, tx.amount.toString(), tx.status, JSON.stringify(tx.description ?? "")
-  ].join(","))];
-  return new NextResponse(rows.join("\n"), { headers: { "Content-Type": "text/csv", "Content-Disposition": "attachment; filename=monthly-report.csv" } });
+
+  const period = await prisma.monthlyPeriod.findUnique({ where: { id: periodId } });
+  if (!period) return NextResponse.json({ error: "Accounting month not found" }, { status: 404 });
+
+  const transactions = await prisma.transaction.findMany({
+    where: { periodId },
+    include: { category: true, account: true, service: true, package: true },
+    orderBy: [{ transactionDate: "asc" }, { createdAt: "asc" }]
+  });
+  const rows = [
+    ["Accounting month", `${period.year}-${String(period.month).padStart(2, "0")}`],
+    ["Opening balance", period.openingBalance.toString()],
+    ["Expected closing balance", period.expectedClosingBalance.toString()],
+    ["Recorded closing balance", period.countedClosingBalance.toString()],
+    ["Difference", period.difference.toString()],
+    ["Status", period.status],
+    [],
+    ["date", "entry", "type", "category", "service", "package", "account", "paymentMethod", "amount", "status", "description"]
+  ];
+  for (const transaction of transactions) {
+    rows.push([
+      transaction.transactionDate.toISOString().slice(0, 10),
+      transaction.isOpeningBalance ? "Opening balance" : "Operating",
+      transaction.type,
+      transaction.category.name,
+      transaction.service?.name ?? "",
+      transaction.package?.name ?? "",
+      transaction.account.name,
+      transaction.paymentMethod,
+      transaction.amount.toString(),
+      transaction.status,
+      transaction.description ?? ""
+    ]);
+  }
+
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const filename = `monthly-report-${period.year}-${String(period.month).padStart(2, "0")}.csv`;
+  return new NextResponse(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename=${filename}`
+    }
+  });
 }

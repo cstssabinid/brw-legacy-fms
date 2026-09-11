@@ -56,9 +56,9 @@ export function UserCreateForm() {
         <input className="input" name="name" placeholder="Full name" required />
         <input className="input" name="email" type="email" placeholder="Email" required />
         <input className="input" name="phone" placeholder="Phone (optional)" />
-        <select className="input" name="role" defaultValue="MANAGER">
-          <option value="MANAGER">Cashier / Restricted staff</option>
-          <option value="WORKER">Worker</option>
+        <select className="input" name="role" defaultValue="CASHIER">
+          <option value="CASHIER">Cashier</option>
+          <option value="WORKER">Photographer</option>
         </select>
         <input className="input" name="password" type="password" minLength={16} placeholder="Temporary password (16+ characters)" required />
       </div>
