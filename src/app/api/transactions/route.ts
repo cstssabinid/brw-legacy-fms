@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionSchema } from "@/lib/validations";
+import { recalculateClosedPeriodBalance } from "@/lib/transaction-balances";
 import { AccountType } from "@prisma/client";
-import { canEnterOperationalData, isRestrictedStaffRole } from "@/lib/permissions";
+import { canEnterOperationalData, isAccountAdminRole, isRestrictedStaffRole } from "@/lib/permissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -29,9 +30,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Negative amounts are admin-only adjustments" }, { status: 400 });
   }
 
-  const date = new Date(parsed.data.transactionDate);
-  const period = await prisma.monthlyPeriod.findFirst({ where: { month: date.getMonth() + 1, year: date.getFullYear() } });
-  if (!period || period.status === "CLOSED") return NextResponse.json({ error: "Cannot edit a closed or missing month" }, { status: 400 });
+  const date = new Date(`${parsed.data.transactionDate}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== parsed.data.transactionDate) {
+    return NextResponse.json({ error: "Enter a valid transaction date" }, { status: 400 });
+  }
+  if (parsed.data.periodId && !isAccountAdminRole(session.user.role)) {
+    return NextResponse.json({ error: "Only an administrator can select an accounting month" }, { status: 403 });
+  }
+  const period = parsed.data.periodId
+    ? await prisma.monthlyPeriod.findUnique({ where: { id: parsed.data.periodId } })
+    : await prisma.monthlyPeriod.findFirst({ where: { month: Number(parsed.data.transactionDate.slice(5, 7)), year: Number(parsed.data.transactionDate.slice(0, 4)) } });
+  if (!period) return NextResponse.json({ error: "Choose an accounting month" }, { status: 400 });
+  if (period.month !== Number(parsed.data.transactionDate.slice(5, 7)) || period.year !== Number(parsed.data.transactionDate.slice(0, 4))) {
+    return NextResponse.json({ error: "The date must be in the selected accounting month" }, { status: 400 });
+  }
+  if (period.status === "CLOSED" && !isAccountAdminRole(session.user.role)) {
+    return NextResponse.json({ error: "Only an administrator can correct a closed month" }, { status: 403 });
+  }
+  if (period.status === "CLOSED" && !parsed.data.reason) {
+    return NextResponse.json({ error: "Enter a correction reason for the closed month" }, { status: 400 });
+  }
 
   const category = await prisma.category.findFirst({ where: { name: parsed.data.categoryName, type: parsed.data.type } });
   const accountTypeByPaymentMethod: Record<string, AccountType> = {
@@ -48,27 +66,39 @@ export async function POST(request: Request) {
   const selectedPackage = parsed.data.packageName ? await prisma.package.findFirst({ where: { name: parsed.data.packageName, serviceId: service?.id } }) : null;
   if (!category || !account) return NextResponse.json({ error: "Invalid category or payment method" }, { status: 400 });
 
-  const transaction = await prisma.transaction.create({
-    data: {
-      periodId: period.id,
-      type: parsed.data.type,
-      categoryId: category.id,
-      serviceId: service?.id,
-      packageId: selectedPackage?.id,
-      accountId: account.id,
-      paymentMethod: parsed.data.paymentMethod,
-      amount: parsed.data.amount,
-      transactionDate: date,
-      transactionTime: parsed.data.transactionTime,
-      description: parsed.data.description,
-      comments: parsed.data.comments,
-      recordedById: session.user.id,
-      status: ["ADMIN", "SUPER_ADMIN"].includes(session.user.role) ? "CONFIRMED" : "PENDING",
-      confirmedById: ["ADMIN", "SUPER_ADMIN"].includes(session.user.role) ? session.user.id : undefined,
-      confirmedAt: ["ADMIN", "SUPER_ADMIN"].includes(session.user.role) ? new Date() : undefined
-    }
+  const transaction = await prisma.$transaction(async (tx) => {
+    const created = await tx.transaction.create({
+      data: {
+        periodId: period.id,
+        type: parsed.data.type,
+        categoryId: category.id,
+        serviceId: service?.id,
+        packageId: selectedPackage?.id,
+        accountId: account.id,
+        paymentMethod: parsed.data.paymentMethod,
+        amount: parsed.data.amount,
+        transactionDate: date,
+        transactionTime: "00:00",
+        description: null,
+        comments: parsed.data.comments,
+        recordedById: session.user.id,
+        status: isAccountAdminRole(session.user.role) ? "CONFIRMED" : "PENDING",
+        confirmedById: isAccountAdminRole(session.user.role) ? session.user.id : undefined,
+        confirmedAt: isAccountAdminRole(session.user.role) ? new Date() : undefined
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "Transaction created",
+        entityType: "Transaction",
+        entityId: created.id,
+        newValue: created,
+        reason: parsed.data.reason || undefined
+      }
+    });
+    if (period.status === "CLOSED") await recalculateClosedPeriodBalance(tx, period.id);
+    return created;
   });
-
-  await prisma.auditLog.create({ data: { userId: session.user.id, action: "Transaction created", entityType: "Transaction", entityId: transaction.id, newValue: transaction } });
   return NextResponse.json({ ok: true, transaction });
 }

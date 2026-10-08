@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { isAccountAdminRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { monthClosingSchema } from "@/lib/validations";
+import { sendMonthClosedNotification } from "@/lib/month-closing-notifications";
 
 const accountBalanceFields = [
   { key: "cash", accountType: AccountType.CASH, label: "Cash" },
@@ -185,8 +186,8 @@ export async function POST(request: Request) {
           amount: new Prisma.Decimal(balance.amount),
           transactionDate: nextStart,
           transactionTime: "00:00",
-          description: `Opening balance carried forward from ${period.month}/${period.year}`,
-          comments: `${balance.label} closing balance from the preceding month`,
+          description: null,
+          comments: `Opening balance carried forward from ${period.month}/${period.year} — ${balance.label} closing balance from the preceding month`,
           isOpeningBalance: true,
           status: "CONFIRMED" as const,
           recordedById: session.user.id,
@@ -214,8 +215,19 @@ export async function POST(request: Request) {
         }
       });
 
-      return { expected, counted, difference, nextPeriod };
+      return { expected, counted, difference, nextPeriod, closedPeriodId: period.id };
     });
+
+    // Send notification email asynchronously (don't wait for it)
+    Promise.resolve()
+      .then(async () => {
+        const closedPeriod = await prisma.monthlyPeriod.findUnique({ where: { id: result.closedPeriodId } });
+        const closedByUser = await prisma.user.findUnique({ where: { id: session.user.id } });
+        if (closedPeriod && closedByUser) {
+          await sendMonthClosedNotification(closedPeriod, closedByUser, result.nextPeriod);
+        }
+      })
+      .catch((err) => console.error("Failed to send month closed notification:", err));
 
     return NextResponse.json({
       ok: true,

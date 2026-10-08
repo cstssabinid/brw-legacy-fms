@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
@@ -76,4 +77,97 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "The account could not be created. Please try again." }, { status: 500 });
   }
+}
+
+const updateRoleSchema = z.object({
+  id: z.string().min(1),
+  role: z.enum(["CASHIER", "MANAGER", "WORKER"])
+});
+const manageableStaffRoles = ["CASHIER", "MANAGER", "WORKER"];
+
+async function requireUserAdmin() {
+  const session = await getServerSession(authOptions);
+  if (!session || !isAccountAdminRole(session.user.role)) return null;
+  return session;
+}
+
+export async function PATCH(request: Request) {
+  const session = await requireUserAdmin();
+  if (!session) return NextResponse.json({ error: "You do not have permission to update users" }, { status: 403 });
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "The user details could not be read" }, { status: 400 });
+  }
+  const parsed = updateRoleSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Choose a valid staff role" }, { status: 400 });
+
+  const target = await prisma.user.findUnique({ where: { id: parsed.data.id }, select: { id: true, name: true, role: true } });
+  if (!target) return NextResponse.json({ error: "User account not found" }, { status: 404 });
+  if (target.id === session.user.id || !manageableStaffRoles.includes(target.role)) {
+    return NextResponse.json({ error: "This account cannot be changed here" }, { status: 403 });
+  }
+
+  const user = await prisma.user.update({ where: { id: target.id }, data: { role: parsed.data.role }, select: { id: true, name: true, role: true, status: true } });
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      action: "User role changed",
+      entityType: "User",
+      entityId: target.id,
+      oldValue: { role: target.role },
+      newValue: { role: user.role }
+    }
+  });
+  return NextResponse.json({ user });
+}
+
+export async function DELETE(request: Request) {
+  const session = await requireUserAdmin();
+  if (!session) return NextResponse.json({ error: "You do not have permission to delete users" }, { status: 403 });
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "The user account could not be identified" }, { status: 400 });
+  }
+  const parsed = z.object({ id: z.string().min(1) }).safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "User account not found" }, { status: 400 });
+
+  const target = await prisma.user.findUnique({ where: { id: parsed.data.id }, select: { id: true, role: true } });
+  if (!target) return NextResponse.json({ error: "User account not found" }, { status: 404 });
+  if (target.id === session.user.id || !manageableStaffRoles.includes(target.role)) {
+    return NextResponse.json({ error: "This account cannot be deleted here" }, { status: 403 });
+  }
+
+  // Keep transaction and audit history intact while removing this account's ability to sign in.
+  const deletedEmail = `deleted+${target.id}@deleted.invalid`;
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: target.id },
+      data: {
+        name: "Deleted user",
+        email: deletedEmail,
+        phone: null,
+        avatar: null,
+        passwordHash: await bcrypt.hash(randomUUID(), 12),
+        role: "WORKER",
+        status: "SUSPENDED"
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "User account deleted",
+        entityType: "User",
+        entityId: target.id,
+        oldValue: { role: target.role },
+        newValue: { status: "SUSPENDED", accountDeleted: true }
+      }
+    });
+  });
+  return NextResponse.json({ ok: true });
 }

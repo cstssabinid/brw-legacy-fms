@@ -58,6 +58,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) token.role = (user as unknown as { role: string }).role;
+      if (token.sub) {
+        const currentUser = await prisma.user.findUnique({ where: { id: token.sub }, select: { role: true, status: true } });
+        token.role = currentUser?.status === "ACTIVE" ? currentUser.role : "REVOKED";
+      }
       return token;
     },
     async session({ session, token }) {

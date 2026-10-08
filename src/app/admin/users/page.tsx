@@ -1,9 +1,15 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UserCreateForm } from "./user-create-form";
+import { UserManagementTable } from "./user-management-table";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
-  return <div className="grid gap-5"><h2 className="text-2xl font-black">Users and Roles</h2><UserCreateForm /><div className="card table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.name}</td><td>{user.email}</td><td>{user.role}</td><td>{user.status}</td></tr>)}</tbody></table></div></div>;
+  const [session, users] = await Promise.all([
+    getServerSession(authOptions),
+    prisma.user.findMany({ where: { NOT: { email: { startsWith: "deleted+" } } }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, email: true, role: true, status: true } })
+  ]);
+  return <div className="grid gap-5"><h2 className="text-2xl font-black">Users and Roles</h2><UserCreateForm /><UserManagementTable users={users} currentUserId={session?.user.id ?? ""} /></div>;
 }

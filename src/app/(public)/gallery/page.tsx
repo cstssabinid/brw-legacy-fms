@@ -1,5 +1,6 @@
 import { GalleryLightboxTile, type GalleryLightboxImage } from "@/components/gallery-lightbox";
 import { portfolioCategories } from "@/lib/portfolio";
+import { prisma } from "@/lib/prisma";
 
 const galleryImages = portfolioCategories.flatMap((category, categoryIndex) =>
   category.images.map((image, index) => ({
@@ -17,7 +18,9 @@ const lightboxImages: GalleryLightboxImage[] = galleryImages.map((item) => ({
   title: item.category.title
 }));
 
-export default function GalleryPage() {
+export default async function GalleryPage() {
+  const uploadedImages = await prisma.galleryImage.findMany({ where: { active: true }, orderBy: { createdAt: "desc" } });
+  const uploadedLightboxImages: GalleryLightboxImage[] = uploadedImages.map((entry) => ({ src: entry.imageUrl, alt: entry.title, eyebrow: entry.category, title: entry.title }));
   return (
     <main className="bg-[#031f20] text-white">
       <div className="page-shell py-16 text-center md:py-24">
@@ -63,6 +66,23 @@ export default function GalleryPage() {
           </GalleryLightboxTile>
         ))}
       </section>
+
+      {uploadedImages.length > 0 && <section className="page-shell py-14">
+        <div className="mb-5 border-b border-white/15 pb-4">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[var(--gold)]">Latest work</p>
+          <h2 className="mt-1 text-3xl font-black md:text-4xl">Studio Gallery</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {uploadedImages.map((item, index) => {
+            const image = uploadedLightboxImages[index];
+            return <GalleryLightboxTile key={item.id} image={image} images={uploadedLightboxImages} className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-black">
+              <img src={item.imageUrl} alt={item.title} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4"><p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--gold)]">{item.category}</p><h3 className="mt-1 text-xl font-black">{item.title}</h3>{item.description && <p className="mt-1 line-clamp-2 text-sm text-white/75">{item.description}</p>}</div>
+            </GalleryLightboxTile>;
+          })}
+        </div>
+      </section>}
 
       <div className="page-shell space-y-14 py-16">
         {portfolioCategories.map((category) => (

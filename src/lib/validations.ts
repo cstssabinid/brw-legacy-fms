@@ -32,12 +32,12 @@ export const transactionSchema = z.object({
   categoryName: z.string().min(1),
   paymentMethod: z.string().min(1),
   amount: z.coerce.number().positive("Amount must be positive"),
-  transactionDate: z.string().min(1),
-  transactionTime: z.string().min(1),
+  transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date"),
+  periodId: z.string().optional(),
   serviceName: z.string().optional(),
   packageName: z.string().optional(),
-  description: z.string().optional(),
-  comments: z.string().optional()
+  comments: z.string().trim().max(1200).optional(),
+  reason: z.string().trim().max(1200).optional()
 });
 
 const monthlyBalance = z.coerce.number().finite().min(0, "Balances cannot be negative");

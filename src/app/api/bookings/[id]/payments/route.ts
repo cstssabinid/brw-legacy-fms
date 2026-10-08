@@ -63,6 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const now = new Date();
+    const transactionDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const period = await tx.monthlyPeriod.findFirst({ where: { month: now.getMonth() + 1, year: now.getFullYear() } });
     if (!period || period.status === "CLOSED") throw new Error("Cannot record payment in a closed or missing month");
 
@@ -82,10 +83,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         accountId: account.id,
         paymentMethod: parsed.data.paymentMethod,
         amount: parsed.data.amount,
-        transactionDate: now,
-        transactionTime: now.toTimeString().slice(0, 5),
-        description: `Booking payment confirmation for ${booking.bookingReference}`,
-        comments: parsed.data.notes,
+        transactionDate,
+        transactionTime: "00:00",
+        description: null,
+        comments: [`Booking payment confirmation for ${booking.bookingReference}`, parsed.data.notes].filter(Boolean).join(" — "),
         attachmentUrl: parsed.data.proofAttachmentUrl || undefined,
         status: "CONFIRMED",
         recordedById: session.user.id,

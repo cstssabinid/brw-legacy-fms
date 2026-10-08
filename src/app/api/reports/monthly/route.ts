@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     ["Difference", period.difference.toString()],
     ["Status", period.status],
     [],
-    ["date", "entry", "type", "category", "service", "package", "account", "paymentMethod", "amount", "status", "description"]
+    ["date", "entry", "type", "category", "service", "package", "account", "paymentMethod", "amount", "status", "comments"]
   ];
   for (const transaction of transactions) {
     rows.push([
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       transaction.paymentMethod,
       transaction.amount.toString(),
       transaction.status,
-      transaction.description ?? ""
+      transaction.comments ?? transaction.description ?? ""
     ]);
   }
 
