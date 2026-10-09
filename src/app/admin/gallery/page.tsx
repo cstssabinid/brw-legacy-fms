@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { ConfirmDeleteForm } from "@/components/confirm-delete-form";
 import { uploadedImageDataUrl } from "@/lib/admin-image";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/server-permissions";
@@ -89,6 +90,30 @@ async function updateGalleryImage(formData: FormData) {
   revalidatePath("/gallery");
 }
 
+async function deleteGalleryImage(formData: FormData) {
+  "use server";
+  const session = await requireAdminSection("/admin/gallery");
+  const id = String(formData.get("id") ?? "");
+  const existing = await prisma.galleryImage.findUnique({ where: { id } });
+  if (!existing) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.attachment.deleteMany({ where: { entityType: "GalleryImage", entityId: id } });
+    await tx.galleryImage.delete({ where: { id } });
+    await tx.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "Gallery image deleted",
+        entityType: "GalleryImage",
+        entityId: id,
+        oldValue: { title: existing.title, category: existing.category, description: existing.description, imageUrl: existing.imageUrl, active: existing.active }
+      }
+    });
+  });
+  revalidatePath("/admin/gallery");
+  revalidatePath("/gallery");
+}
+
 export default async function AdminGalleryPage() {
   const images = await prisma.galleryImage.findMany({ orderBy: { createdAt: "desc" } });
   return (
@@ -112,7 +137,7 @@ export default async function AdminGalleryPage() {
             <p className="text-sm text-[var(--muted)]">{item.category} · {item.active ? "Active" : "Inactive"}</p>
             <img className="mt-3 aspect-[4/3] w-full rounded-xl object-cover" src={item.imageUrl} alt={item.title} />
             <details className="mt-4">
-              <summary className="cursor-pointer font-bold">Edit gallery item</summary>
+              <summary className="cursor-pointer font-bold">Edit details or photo</summary>
               <form action={updateGalleryImage} encType="multipart/form-data" className="mt-3 grid gap-3">
                 <input type="hidden" name="id" value={item.id} />
                 <input className="input" name="title" defaultValue={item.title} minLength={2} required />
@@ -124,6 +149,9 @@ export default async function AdminGalleryPage() {
                 <button className="btn btn-primary" type="submit">Save changes</button>
               </form>
             </details>
+            <div className="mt-3">
+              <ConfirmDeleteForm action={deleteGalleryImage} itemId={item.id} itemLabel={`gallery item “${item.title}”`} />
+            </div>
           </article>
         ))}
       </div>

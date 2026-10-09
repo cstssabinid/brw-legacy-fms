@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { ConfirmDeleteForm } from "@/components/confirm-delete-form";
 import { uploadedImageDataUrl } from "@/lib/admin-image";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/server-permissions";
@@ -93,6 +94,29 @@ async function updateBlogPost(formData: FormData) {
   revalidatePath("/admin/blog");
 }
 
+async function deleteBlogPost(formData: FormData) {
+  "use server";
+  const session = await requireAdminSection("/admin/blog");
+  const id = String(formData.get("id") ?? "");
+  const existing = await prisma.blogPost.findUnique({ where: { id } });
+  if (!existing) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.attachment.deleteMany({ where: { entityType: "BlogPost", entityId: id } });
+    await tx.blogPost.delete({ where: { id } });
+    await tx.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "Blog post deleted",
+        entityType: "BlogPost",
+        entityId: id,
+        oldValue: { title: existing.title, slug: existing.slug, status: existing.status, coverImage: existing.coverImage }
+      }
+    });
+  });
+  revalidatePath("/admin/blog");
+}
+
 export default async function BlogAdminPage() {
   const posts = await prisma.blogPost.findMany({ include: { author: true }, orderBy: { createdAt: "desc" } });
   return (
@@ -127,6 +151,9 @@ export default async function BlogAdminPage() {
                   <button className="btn btn-primary" type="submit">Save post</button>
                 </form>
               </details>
+              <div className="mt-3 max-w-48">
+                <ConfirmDeleteForm action={deleteBlogPost} itemId={post.id} itemLabel={`blog post “${post.title}”`} />
+              </div>
             </td><td>{post.slug}</td><td>{post.status}</td><td>{post.author.name}</td>
           </tr>)}</tbody>
         </table>
