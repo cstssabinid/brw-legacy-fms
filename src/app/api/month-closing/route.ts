@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { isAccountAdminRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { monthClosingSchema } from "@/lib/validations";
+import { recalculateClosedPeriodBalance } from "@/lib/transaction-balances";
 import { sendMonthClosedNotification } from "@/lib/month-closing-notifications";
 
 const accountBalanceFields = [
@@ -15,6 +16,8 @@ const accountBalanceFields = [
   { key: "other", accountType: AccountType.OTHER, label: "Other" }
 ] as const;
 
+type ClosingBalance = (typeof accountBalanceFields)[number] & { amount: number };
+
 class MonthClosingError extends Error {
   constructor(message: string, readonly status = 400) {
     super(message);
@@ -23,6 +26,10 @@ class MonthClosingError extends Error {
 
 function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function totalBalances(balances: ClosingBalance[]) {
+  return roundCurrency(balances.reduce((sum, balance) => sum + balance.amount, 0));
 }
 
 export async function POST(request: Request) {
@@ -55,7 +62,10 @@ export async function POST(request: Request) {
       });
 
       if (!period) throw new MonthClosingError("The accounting month could not be found", 404);
-      if (period.status === "CLOSED") throw new MonthClosingError("This accounting month has already been closed", 409);
+      const isReclosing = period.status === "CLOSED";
+      if (isReclosing && !parsed.data.reason?.trim()) {
+        throw new MonthClosingError("Enter a reason before reclosing this month");
+      }
 
       const pending = period.transactions.filter((transaction) => transaction.status === "PENDING").length;
       if (pending > 0) throw new MonthClosingError("Cannot close month because pending records exist");
@@ -72,11 +82,11 @@ export async function POST(request: Request) {
         .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
       const expected = roundCurrency(Number(period.openingBalance) + operatingIncome - expenses + adjustments);
 
-      const closingBalances = accountBalanceFields.map((field) => ({
+      const closingBalances: ClosingBalance[] = accountBalanceFields.map((field) => ({
         ...field,
         amount: parsed.data[field.key]
       }));
-      const counted = roundCurrency(closingBalances.reduce((sum, balance) => sum + balance.amount, 0));
+      const counted = totalBalances(closingBalances);
       const difference = roundCurrency(counted - expected);
       const reason = parsed.data.reason?.trim() || null;
 
@@ -89,16 +99,8 @@ export async function POST(request: Request) {
       const nextYear = nextStart.getFullYear();
       const nextEnd = new Date(nextYear, nextStart.getMonth() + 1, 0);
       const existingNextPeriod = await tx.monthlyPeriod.findUnique({
-        where: { month_year: { month: nextMonth, year: nextYear } },
-        include: { transactions: { select: { isOpeningBalance: true } } }
+        where: { month_year: { month: nextMonth, year: nextYear } }
       });
-
-      if (existingNextPeriod?.status === "CLOSED") {
-        throw new MonthClosingError("The following accounting month is already closed and cannot be reopened", 409);
-      }
-      if (existingNextPeriod?.transactions.some((transaction) => !transaction.isOpeningBalance)) {
-        throw new MonthClosingError("The following accounting month already has transactions and its opening balance cannot be changed", 409);
-      }
 
       const accounts = await tx.account.findMany({
         where: { type: { in: accountBalanceFields.map((balance) => balance.accountType) } },
@@ -137,22 +139,7 @@ export async function POST(request: Request) {
       })));
 
       const nextPeriod = existingNextPeriod
-        ? await tx.monthlyPeriod.update({
-            where: { id: existingNextPeriod.id },
-            data: {
-              startDate: nextStart,
-              endDate: nextEnd,
-              openingBalance: new Prisma.Decimal(counted),
-              openingDate: new Date(parsed.data.openingDate),
-              status: "OPEN",
-              expectedClosingBalance: new Prisma.Decimal(0),
-              countedClosingBalance: new Prisma.Decimal(0),
-              difference: new Prisma.Decimal(0),
-              closedById: null,
-              closedAt: null,
-              adminNotes: null
-            }
-          })
+        ? existingNextPeriod
         : await tx.monthlyPeriod.create({
             data: {
               month: nextMonth,
@@ -165,43 +152,91 @@ export async function POST(request: Request) {
             }
           });
 
-      if (existingNextPeriod) {
-        await tx.transaction.deleteMany({ where: { periodId: nextPeriod.id, isOpeningBalance: true } });
-      }
+      const laterPeriods = await tx.monthlyPeriod.findMany({
+        where: {
+          OR: [
+            { year: { gt: period.year } },
+            { year: period.year, month: { gt: period.month } }
+          ]
+        },
+        include: { accountBalances: { select: { accountType: true, closingBalance: true } } },
+        orderBy: [{ year: "asc" }, { month: "asc" }]
+      });
 
-      await Promise.all(closingBalances.map((balance) => tx.periodAccountBalance.upsert({
-        where: { periodId_accountType: { periodId: nextPeriod.id, accountType: balance.accountType } },
-        update: { openingBalance: new Prisma.Decimal(balance.amount), closingBalance: new Prisma.Decimal(0) },
-        create: { periodId: nextPeriod.id, accountType: balance.accountType, openingBalance: new Prisma.Decimal(balance.amount) }
-      })));
+      let carriedBalances = closingBalances;
+      const updatedPeriods: Array<{ id: string; month: number; year: number; openingBalance: number }> = [];
+      for (const laterPeriod of laterPeriods) {
+        const openingBalance = totalBalances(carriedBalances);
+        const isImmediateNext = laterPeriod.id === nextPeriod.id;
+        const openingDate = isImmediateNext
+          ? new Date(parsed.data.openingDate)
+          : laterPeriod.openingDate ?? laterPeriod.startDate;
 
-      const openingTransactions = closingBalances
-        .filter((balance) => balance.amount > 0)
-        .map((balance) => ({
-          periodId: nextPeriod.id,
-          type: TransactionType.INCOME,
-          categoryId: openingBalanceCategory.id,
-          accountId: accountIdByType.get(balance.accountType)!,
-          paymentMethod: "Opening Balance",
-          amount: new Prisma.Decimal(balance.amount),
-          transactionDate: nextStart,
-          transactionTime: "00:00",
-          description: null,
-          comments: `Opening balance carried forward from ${period.month}/${period.year} — ${balance.label} closing balance from the preceding month`,
-          isOpeningBalance: true,
-          status: "CONFIRMED" as const,
-          recordedById: session.user.id,
-          confirmedById: session.user.id,
-          confirmedAt: new Date()
-        }));
-      if (openingTransactions.length > 0) {
-        await tx.transaction.createMany({ data: openingTransactions });
+        await tx.monthlyPeriod.update({
+          where: { id: laterPeriod.id },
+          data: { openingBalance: new Prisma.Decimal(openingBalance), openingDate }
+        });
+        await Promise.all(carriedBalances.map((balance) => tx.periodAccountBalance.upsert({
+          where: { periodId_accountType: { periodId: laterPeriod.id, accountType: balance.accountType } },
+          update: { openingBalance: new Prisma.Decimal(balance.amount) },
+          create: {
+            periodId: laterPeriod.id,
+            accountType: balance.accountType,
+            openingBalance: new Prisma.Decimal(balance.amount)
+          }
+        })));
+
+        await tx.transaction.deleteMany({ where: { periodId: laterPeriod.id, isOpeningBalance: true } });
+        const openingTransactions = carriedBalances
+          .filter((balance) => balance.amount > 0)
+          .map((balance) => {
+            const accountId = accountIdByType.get(balance.accountType);
+            if (!accountId) throw new MonthClosingError(`Set up an account record for ${balance.label} before updating the opening balance`);
+            return {
+              periodId: laterPeriod.id,
+              type: TransactionType.INCOME,
+              categoryId: openingBalanceCategory.id,
+              accountId,
+              paymentMethod: "Opening Balance",
+              amount: new Prisma.Decimal(balance.amount),
+              transactionDate: laterPeriod.startDate,
+              transactionTime: "00:00",
+              description: null,
+              comments: `Opening balance carried forward from ${laterPeriod.month === 1 ? laterPeriod.year - 1 : laterPeriod.year}/${laterPeriod.month === 1 ? 12 : laterPeriod.month - 1} — ${balance.label} closing balance from the preceding month`,
+              isOpeningBalance: true,
+              status: "CONFIRMED" as const,
+              recordedById: session.user.id,
+              confirmedById: session.user.id,
+              confirmedAt: new Date()
+            };
+          });
+        if (openingTransactions.length > 0) await tx.transaction.createMany({ data: openingTransactions });
+
+        if (laterPeriod.status === "CLOSED") {
+          await recalculateClosedPeriodBalance(tx, laterPeriod.id);
+          const closingBalanceByType = new Map<AccountType, number>(
+            laterPeriod.accountBalances.map((item): [AccountType, number] => [item.accountType, Number(item.closingBalance)])
+          );
+          carriedBalances = accountBalanceFields.map((field) => ({
+            ...field,
+            amount: closingBalanceByType.get(field.accountType) ?? 0
+          }));
+        } else {
+          // Preserve the current month's entries and stop once the live period is updated.
+          const livePeriod = laterPeriods.find((item) => item.status !== "CLOSED");
+          if (livePeriod?.id === laterPeriod.id) {
+            updatedPeriods.push({ id: laterPeriod.id, month: laterPeriod.month, year: laterPeriod.year, openingBalance });
+            break;
+          }
+        }
+
+        updatedPeriods.push({ id: laterPeriod.id, month: laterPeriod.month, year: laterPeriod.year, openingBalance });
       }
 
       await tx.auditLog.create({
         data: {
           userId: session.user.id,
-          action: "Month closed and next month opened",
+          action: isReclosing ? "Month reclosed and following balances updated" : "Month closed and next month opened",
           entityType: "MonthlyPeriod",
           entityId: period.id,
           newValue: {
@@ -209,35 +244,39 @@ export async function POST(request: Request) {
             countedClosingBalance: counted,
             difference,
             closingBalances: Object.fromEntries(closingBalances.map((balance) => [balance.key, balance.amount])),
-            nextPeriod: { id: nextPeriod.id, month: nextPeriod.month, year: nextPeriod.year, openingBalance: counted }
+            updatedPeriods
           },
           reason: reason ?? undefined
         }
       });
 
-      return { expected, counted, difference, nextPeriod, closedPeriodId: period.id };
+      const refreshedNextPeriod = await tx.monthlyPeriod.findUniqueOrThrow({ where: { id: nextPeriod.id } });
+      return { expected, counted, difference, nextPeriod: refreshedNextPeriod, updatedPeriods, closedPeriodId: period.id, isReclosing };
     });
 
-    // Send notification email asynchronously (don't wait for it)
-    Promise.resolve()
-      .then(async () => {
-        const closedPeriod = await prisma.monthlyPeriod.findUnique({ where: { id: result.closedPeriodId } });
-        const closedByUser = await prisma.user.findUnique({ where: { id: session.user.id } });
-        if (closedPeriod && closedByUser) {
-          await sendMonthClosedNotification(closedPeriod, closedByUser, result.nextPeriod);
-        }
-      })
-      .catch((err) => console.error("Failed to send month closed notification:", err));
+    if (!result.isReclosing) {
+      // Send the first-close notification asynchronously; corrections should not resend the close email.
+      Promise.resolve()
+        .then(async () => {
+          const closedPeriod = await prisma.monthlyPeriod.findUnique({ where: { id: result.closedPeriodId } });
+          const closedByUser = await prisma.user.findUnique({ where: { id: session.user.id } });
+          if (closedPeriod && closedByUser) {
+            await sendMonthClosedNotification(closedPeriod, closedByUser, result.nextPeriod);
+          }
+        })
+        .catch((err) => console.error("Failed to send month closed notification:", err));
+    }
 
     return NextResponse.json({
       ok: true,
       expected: result.expected,
       counted: result.counted,
       difference: result.difference,
+      updatedPeriods: result.updatedPeriods,
       nextPeriod: {
         month: result.nextPeriod.month,
         year: result.nextPeriod.year,
-        openingBalance: result.counted
+        openingBalance: Number(result.nextPeriod.openingBalance)
       }
     });
   } catch (error) {

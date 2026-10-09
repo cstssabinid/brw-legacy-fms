@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   if (period.status === "CLOSED" && !isAccountAdminRole(session.user.role)) {
     return NextResponse.json({ error: "Only an administrator can correct a closed month" }, { status: 403 });
   }
-  if (period.status === "CLOSED" && !parsed.data.reason) {
+  if (period.status === "CLOSED" && !parsed.data.reason?.trim()) {
     return NextResponse.json({ error: "Enter a correction reason for the closed month" }, { status: 400 });
   }
 
