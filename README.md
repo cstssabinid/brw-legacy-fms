@@ -57,6 +57,9 @@ SMTP_PASSWORD="your-app-password"
 # WhatsApp Configuration (Optional - requires WhatsApp Business API setup)
 WHATSAPP_API_KEY="your-whatsapp-api-key"
 WHATSAPP_API_URL="https://your-whatsapp-provider-api-url"
+
+# Cron Job Security (Optional - for month closing reminders)
+CRON_SECRET="your-random-secret-string-for-cron-authorization"
 ```
 
 `SEED_ADMIN_PASSWORD` is required whenever the seed runs. It must contain at least 16 characters, including uppercase, lowercase, number and symbol characters. `SEED_WORKER_PASSWORD` is optional; omit it to skip creating the worker account. Never commit real values.
@@ -82,8 +85,67 @@ Configure `WHATSAPP_API_KEY` and `WHATSAPP_API_URL` for your chosen provider.
 
 Without WhatsApp configuration, booking WhatsApp messages are logged as warnings but the system continues to function.
 
+### Month Closing Reminders (Automated Notifications)
 
-## Local Seed Accounts
+Admins receive email reminders on the last day of each month to close the accounting period. Set up a scheduled cron job to trigger this.
+
+**Environment Variables:**
+```env
+CRON_SECRET="your-random-secret-string"  # Secure this - use a strong random value
+```
+
+**Setup Options:**
+
+#### Option 1: Vercel Cron (Recommended for Vercel deployments)
+Create `vercel.json` cron configuration:
+```json
+{
+  "crons": [{
+    "path": "/api/cron/month-closing-reminder",
+    "schedule": "0 9 * * *"
+  }]
+}
+```
+
+This runs every day at 9 AM UTC.
+
+#### Option 2: External Cron Service
+Use services like [easycron.com](https://easycron.com) or [cron-job.org](https://cron-job.org):
+
+```bash
+# Call daily (example)
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
+  https://your-app.vercel.app/api/cron/month-closing-reminder
+```
+
+#### Option 3: GitHub Actions
+Create `.github/workflows/month-closing-reminder.yml`:
+```yaml
+name: Month Closing Reminder
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://your-app.vercel.app/api/cron/month-closing-reminder
+```
+
+**What Happens:**
+- **Last day of month**: Admins receive email reminder with month status and pending transaction count
+- **Month is closed**: All admins receive confirmation email with closing details
+- **New month opens**: Confirmation email sent that new accounting period is ready
+
+**Notifications Require:**
+- Valid SMTP configuration (email sending)
+- `CRON_SECRET` environment variable set
+- Cron job calling `/api/cron/month-closing-reminder` at least once daily
+
 
 - Administrator email defaults to `admin@brwlegacy.rw`.
 - Worker email defaults to `worker@brwlegacy.rw` when `SEED_WORKER_PASSWORD` is supplied.
