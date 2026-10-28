@@ -8,22 +8,21 @@ type ManagedUser = { id: string; name: string; email: string; role: string; stat
 
 export function UserManagementTable({ users, currentUserId }: { users: ManagedUser[]; currentUserId: string }) {
   const router = useRouter();
-  const [roles, setRoles] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState("");
 
-  async function changeRole(user: ManagedUser) {
-    const role = roles[user.id] ?? user.role;
-    if (role === user.role) return;
+  async function updateUser(event: React.FormEvent<HTMLFormElement>, user: ManagedUser) {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
     setSavingId(user.id);
     try {
       const response = await fetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: user.id, role })
+        body: JSON.stringify(payload)
       });
       const data = await response.json();
-      if (!response.ok) return toast.error(data.error ?? "Could not update role");
-      toast.success("User role updated");
+      if (!response.ok) return toast.error(data.error ?? "Could not update account");
+      toast.success("User account updated");
       router.refresh();
     } catch {
       toast.error("Could not reach the user management service");
@@ -62,18 +61,20 @@ export function UserManagementTable({ users, currentUserId }: { users: ManagedUs
             const canManage = user.id !== currentUserId && ["CASHIER", "MANAGER", "WORKER"].includes(user.role);
             return (
               <tr key={user.id}>
-                <td>{user.name}</td><td>{user.email}</td>
+                <td>{user.name}</td><td>{user.email}</td><td>{user.role}</td><td>{user.status}</td>
                 <td>
-                  {canManage ? (
-                    <select className="input min-w-36" aria-label={`Role for ${user.name}`} value={roles[user.id] ?? user.role} onChange={(event) => setRoles((current) => ({ ...current, [user.id]: event.target.value }))}>
-                      <option value="CASHIER">Cashier</option><option value="MANAGER">Manager (legacy)</option><option value="WORKER">Photographer</option>
-                    </select>
-                  ) : user.role}
-                </td>
-                <td>{user.status}</td>
-                <td>
-                  {canManage ? <div className="flex flex-wrap gap-2">
-                    <button className="btn btn-primary" type="button" disabled={savingId === user.id || (roles[user.id] ?? user.role) === user.role} onClick={() => changeRole(user)}>{savingId === user.id ? "Saving..." : "Modify role"}</button>
+                  {canManage ? <div className="grid min-w-56 gap-2">
+                    <details>
+                      <summary className="cursor-pointer font-bold">Select and edit user</summary>
+                      <form className="mt-3 grid min-w-64 gap-3" onSubmit={(event) => updateUser(event, user)}>
+                        <input type="hidden" name="id" value={user.id} />
+                        <label className="grid gap-1 text-sm"><span>Full name</span><input className="input" name="name" defaultValue={user.name} minLength={2} maxLength={120} required /></label>
+                        <label className="grid gap-1 text-sm"><span>Email</span><input className="input" name="email" type="email" defaultValue={user.email} required /></label>
+                        <label className="grid gap-1 text-sm"><span>Role</span><select className="input" name="role" defaultValue={user.role}><option value="CASHIER">Cashier</option><option value="MANAGER">Manager (legacy)</option><option value="WORKER">Photographer</option></select></label>
+                        <label className="grid gap-1 text-sm"><span>Status</span><select className="input" name="status" defaultValue={user.status}><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option></select></label>
+                        <button className="btn btn-primary" type="submit" disabled={savingId === user.id}>{savingId === user.id ? "Saving..." : "Save user"}</button>
+                      </form>
+                    </details>
                     <button className="btn border border-red-400/50 text-red-700" type="button" disabled={savingId === user.id} onClick={() => deleteUser(user)}>{savingId === user.id ? "Saving..." : "Delete account"}</button>
                   </div> : <span className="text-sm text-[var(--muted)]">Protected</span>}
                 </td>

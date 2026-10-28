@@ -5,10 +5,10 @@ import { PublicFooter } from "@/components/public-footer";
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <PublicNav />
-      {children}
-      <PublicFooter />
-      <BerwaBot />
+      <div className="public-layout-nav"><PublicNav /></div>
+      <div className="public-layout-content">{children}</div>
+      <div className="public-layout-footer"><PublicFooter /></div>
+      <div className="public-layout-assistant"><BerwaBot /></div>
     </>
   );
 }

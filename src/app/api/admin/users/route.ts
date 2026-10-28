@@ -79,9 +79,14 @@ export async function POST(request: Request) {
   }
 }
 
-const updateRoleSchema = z.object({
+const updateUserSchema = z.object({
   id: z.string().min(1),
-  role: z.enum(["CASHIER", "MANAGER", "WORKER"])
+  name: z.string().trim().min(2).max(120).optional(),
+  email: z.string().trim().email().transform((value) => value.toLowerCase()).optional(),
+  role: z.enum(["CASHIER", "MANAGER", "WORKER"]).optional(),
+  status: z.enum(["ACTIVE", "SUSPENDED"]).optional()
+}).refine(({ name, email, role, status }) => name !== undefined || email !== undefined || role !== undefined || status !== undefined, {
+  message: "Provide at least one account field to update"
 });
 const manageableStaffRoles = ["CASHIER", "MANAGER", "WORKER"];
 
@@ -101,27 +106,51 @@ export async function PATCH(request: Request) {
   } catch {
     return NextResponse.json({ error: "The user details could not be read" }, { status: 400 });
   }
-  const parsed = updateRoleSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Choose a valid staff role" }, { status: 400 });
+  const parsed = updateUserSchema.safeParse(body);
+  if (!parsed.success) {
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const firstError = Object.values(fieldErrors).flat().find(Boolean);
+    return NextResponse.json({ error: firstError ?? parsed.error.issues[0]?.message ?? "Enter valid user details" }, { status: 400 });
+  }
 
-  const target = await prisma.user.findUnique({ where: { id: parsed.data.id }, select: { id: true, name: true, role: true } });
+  const target = await prisma.user.findUnique({ where: { id: parsed.data.id }, select: { id: true, name: true, email: true, role: true, status: true } });
   if (!target) return NextResponse.json({ error: "User account not found" }, { status: 404 });
   if (target.id === session.user.id || !manageableStaffRoles.includes(target.role)) {
     return NextResponse.json({ error: "This account cannot be changed here" }, { status: 403 });
   }
 
-  const user = await prisma.user.update({ where: { id: target.id }, data: { role: parsed.data.role }, select: { id: true, name: true, role: true, status: true } });
-  await prisma.auditLog.create({
-    data: {
-      userId: session.user.id,
-      action: "User role changed",
-      entityType: "User",
-      entityId: target.id,
-      oldValue: { role: target.role },
-      newValue: { role: user.role }
+  try {
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: target.id },
+        data: {
+          ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+          ...(parsed.data.email !== undefined ? { email: parsed.data.email } : {}),
+          ...(parsed.data.role !== undefined ? { role: parsed.data.role as Role } : {}),
+          ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {})
+        },
+        select: { id: true, name: true, email: true, role: true, status: true }
+      });
+      await tx.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: "User account updated",
+          entityType: "User",
+          entityId: target.id,
+          oldValue: { name: target.name, email: target.email, role: target.role, status: target.status },
+          newValue: { name: updated.name, email: updated.email, role: updated.role, status: updated.status }
+        }
+      });
+      return updated;
+    });
+    return NextResponse.json({ user });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
     }
-  });
-  return NextResponse.json({ user });
+    console.error("User account update failed", error);
+    return NextResponse.json({ error: "The user account could not be updated" }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: Request) {
@@ -137,7 +166,7 @@ export async function DELETE(request: Request) {
   const parsed = z.object({ id: z.string().min(1) }).safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "User account not found" }, { status: 400 });
 
-  const target = await prisma.user.findUnique({ where: { id: parsed.data.id }, select: { id: true, role: true } });
+  const target = await prisma.user.findUnique({ where: { id: parsed.data.id }, select: { id: true, name: true, email: true, role: true, status: true } });
   if (!target) return NextResponse.json({ error: "User account not found" }, { status: 404 });
   if (target.id === session.user.id || !manageableStaffRoles.includes(target.role)) {
     return NextResponse.json({ error: "This account cannot be deleted here" }, { status: 403 });
@@ -164,7 +193,7 @@ export async function DELETE(request: Request) {
         action: "User account deleted",
         entityType: "User",
         entityId: target.id,
-        oldValue: { role: target.role },
+        oldValue: { name: target.name, email: target.email, role: target.role, status: target.status },
         newValue: { status: "SUSPENDED", accountDeleted: true }
       }
     });

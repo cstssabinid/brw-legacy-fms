@@ -3,7 +3,7 @@
 import { getSession, signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Banknote, Camera, Check, ShieldCheck } from "lucide-react";
+import { ArrowRight, Banknote, Camera, Check, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { defaultPortalPathForRole } from "@/lib/permissions";
 import { LOGIN_ROLE_OPTIONS, type LoginRole } from "@/lib/login-roles";
@@ -19,6 +19,7 @@ export function LoginForm() {
   const params = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<LoginRole | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,28 +53,26 @@ export function LoginForm() {
 
   if (!selectedRole) {
     return (
-      <section className="card grid gap-4 p-6" aria-labelledby="role-selection-heading">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--gold)]">Step 1 of 2</p>
-          <h2 id="role-selection-heading" className="mt-1 text-xl font-black">Select your role</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">Choose the role assigned to your account before entering your credentials.</p>
-        </div>
-        <div className="grid gap-3">
+      <section className="staff-login-role-step" aria-labelledby="role-selection-heading">
+        <p className="staff-login-step-label">Step 1 of 2 · Staff login</p>
+        <h1 id="role-selection-heading" className="staff-login-heading">Choose your role</h1>
+        <p className="staff-login-subtitle">Select the role assigned to your account to continue.</p>
+        <div className="staff-login-role-list">
           {LOGIN_ROLE_OPTIONS.map((role) => {
             const Icon = roleIcons[role.id];
             return (
               <button
                 key={role.id}
                 type="button"
-                className="group flex w-full items-center gap-4 rounded-lg border border-[var(--border)] px-4 py-4 text-left transition hover:border-[var(--gold)] hover:bg-[color:color-mix(in_srgb,var(--gold)_8%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--gold)]"
+                className="staff-login-role-button"
                 onClick={() => setSelectedRole(role.id)}
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--navy)] text-white"><Icon size={20} aria-hidden="true" /></span>
+                <span className="staff-login-icon"><Icon size={19} aria-hidden="true" /></span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-black">{role.label}</span>
-                  <span className="mt-0.5 block text-sm text-[var(--muted)]">{role.description}</span>
+                  <span className="block font-bold">{role.label}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--muted)]">{role.description}</span>
                 </span>
-                <span className="text-[var(--muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--gold)]" aria-hidden="true">›</span>
+                <ArrowRight size={17} className="shrink-0 text-[var(--gold)]" aria-hidden="true" />
               </button>
             );
           })}
@@ -86,21 +85,34 @@ export function LoginForm() {
   const Icon = roleIcons[selectedRole];
 
   return (
-    <form className="card grid gap-4 p-6" onSubmit={submit}>
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-black/[0.02] p-3 dark:bg-white/[0.03]">
-        <div className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-full bg-[var(--navy)] text-white"><Icon size={18} aria-hidden="true" /></span>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">Signing in as</p>
-            <p className="font-black">{role.label}</p>
-          </div>
-        </div>
-        <button type="button" className="text-sm font-bold text-[var(--navy)] underline-offset-4 hover:underline dark:text-[var(--gold)]" onClick={() => setSelectedRole(null)} disabled={loading}>Change</button>
+    <form className="staff-login-form" onSubmit={submit}>
+      <p className="staff-login-step-label">Step 2 of 2 · Secure access</p>
+      <h1 className="staff-login-heading">Welcome</h1>
+      <p className="staff-login-subtitle">Sign in to your {role.label.toLowerCase()} account.</p>
+      <div className="mb-4 flex items-center justify-center gap-2 text-xs font-semibold text-[var(--muted)]">
+        <span className="staff-login-icon h-8 w-8"><Icon size={16} aria-hidden="true" /></span>
+        <span>{role.label}</span>
       </div>
-      <input className="input" name="email" type="email" placeholder="Email" autoComplete="username" required />
-      <input className="input" name="password" type="password" placeholder="Password" autoComplete="current-password" required />
-      <button className="btn btn-primary" disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
-      <p className="flex items-center gap-2 text-sm text-[var(--muted)]"><Check size={16} className="text-[var(--gold)]" aria-hidden="true" /> Your account must be authorised for the selected role.</p>
+      <label className="staff-login-field">
+        <span className="sr-only">Email address</span>
+        <input name="email" type="email" placeholder="Email address" autoComplete="username" required />
+      </label>
+      <label className="staff-login-field staff-login-field-password">
+        <span className="sr-only">Password</span>
+        <input name="password" type={showPassword ? "text" : "password"} placeholder="Password" autoComplete="current-password" required />
+        <button
+          className="staff-login-eye"
+          type="button"
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          aria-pressed={showPassword}
+          onClick={() => setShowPassword((visible) => !visible)}
+        >
+          {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+        </button>
+      </label>
+      <button className="staff-login-submit" type="submit" disabled={loading}>{loading ? "Signing in..." : "LOGIN"}</button>
+      <p className="staff-login-note"><Check size={15} aria-hidden="true" /> Your account must be authorised for this role.</p>
+      <button className="staff-login-back" type="button" onClick={() => setSelectedRole(null)} disabled={loading}>Change staff role</button>
     </form>
   );
 }
