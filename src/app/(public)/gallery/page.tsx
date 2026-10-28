@@ -2,6 +2,8 @@ import { GalleryLightboxTile, type GalleryLightboxImage } from "@/components/gal
 import { portfolioCategories } from "@/lib/portfolio";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 const galleryImages = portfolioCategories.flatMap((category, categoryIndex) =>
   category.images.map((image, index) => ({
     category,

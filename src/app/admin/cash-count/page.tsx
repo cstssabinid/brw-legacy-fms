@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/server-permissions";
 import { monthLabel, rwf } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 const denominations = [100, 500, 1000, 2000, 5000, 10000];
 
 async function saveCashCount(formData: FormData) {
