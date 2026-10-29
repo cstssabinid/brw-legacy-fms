@@ -136,6 +136,12 @@ button, input, select, textarea {
   padding: 0.78rem 0.85rem;
 }
 
+select option,
+select optgroup {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
 .dark .btn-primary {
   background: linear-gradient(110deg, #bc9650, #f1d597 48%, #d4ad63);
   color: #18140b;
