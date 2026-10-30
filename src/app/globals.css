@@ -241,17 +241,181 @@ body:has(.staff-login-page) .public-layout-assistant {
   gap: 14px;
 }
 
+.staff-login-topbar {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .staff-login-brand {
   color: #e9e5dc;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.19em;
-  text-align: center;
   text-transform: uppercase;
 }
 
 .staff-login-brand span {
   color: var(--gold);
+}
+
+.staff-login-home {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  border: 1px solid rgba(222, 186, 112, 0.32);
+  border-radius: 999px;
+  background: rgba(217, 181, 107, 0.07);
+  color: #f1d597;
+  font-size: 11px;
+  font-weight: 700;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.staff-login-home:hover {
+  transform: translateX(-2px);
+  border-color: rgba(241, 213, 151, 0.72);
+  background: rgba(217, 181, 107, 0.14);
+}
+
+.staff-login-intro {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: radial-gradient(ellipse at 50% 46%, rgba(68, 54, 32, 0.28), transparent 43%), rgba(7, 9, 10, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.staff-login-intro-glass {
+  position: relative;
+  display: flex;
+  width: min(100%, 520px);
+  min-height: 390px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 58px 24px 36px;
+  border: 1px solid rgba(222, 186, 112, 0.36);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(27, 30, 31, 0.72), rgba(11, 13, 14, 0.56));
+  box-shadow: 0 35px 110px rgba(0, 0, 0, 0.56), inset 0 1px rgba(255, 255, 255, 0.11), 0 0 70px rgba(191, 151, 76, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.staff-login-intro-glass::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 18%, rgba(255, 255, 255, 0.055) 48%, transparent 72%);
+  content: "";
+  pointer-events: none;
+}
+
+.staff-login-intro-home {
+  position: absolute;
+  z-index: 2;
+  top: 18px;
+  left: 18px;
+}
+
+.staff-login-intro-art {
+  position: relative;
+  width: min(100%, 250px);
+  height: 160px;
+  margin: 0 auto 14px;
+  color: #e9ca84;
+  filter: drop-shadow(0 0 20px rgba(217, 181, 107, 0.2));
+}
+
+.staff-login-intro-person,
+.staff-login-intro-camera,
+.staff-login-intro-arms,
+.staff-login-intro-focus {
+  position: absolute;
+}
+
+.staff-login-intro-person {
+  top: 10px;
+  left: calc(50% - 33px);
+  display: grid;
+  width: 96px;
+  height: 112px;
+  place-items: center;
+  border-radius: 45%;
+  background: radial-gradient(ellipse at 50% 38%, rgba(217, 181, 107, 0.2), transparent 68%);
+}
+
+.staff-login-intro-camera {
+  z-index: 2;
+  top: 40px;
+  left: calc(50% - 48px);
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid rgba(241, 213, 151, 0.4);
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgba(38, 39, 36, 0.97), rgba(17, 19, 19, 0.96));
+  color: #f1d597;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.38), inset 0 1px rgba(255, 255, 255, 0.13);
+}
+
+.staff-login-intro-arms {
+  z-index: 3;
+  inset: 0;
+  overflow: visible;
+  color: #f1d597;
+}
+
+.staff-login-intro-focus {
+  z-index: 1;
+  top: 38px;
+  left: calc(50% - 50px);
+  width: 63px;
+  height: 63px;
+  border: 1px solid rgba(241, 213, 151, 0.44);
+  border-radius: 50%;
+  box-shadow: 0 0 0 9px rgba(217, 181, 107, 0.045), 0 0 36px rgba(217, 181, 107, 0.2);
+  pointer-events: none;
+}
+
+.staff-login-intro-title {
+  position: relative;
+  margin: 2px 0 0;
+  background: linear-gradient(100deg, #f6e4b9, #d9b56b 54%, #fff1cd);
+  background-clip: text;
+  color: transparent;
+  font-size: clamp(25px, 6vw, 36px);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  text-align: center;
+  -webkit-background-clip: text;
+}
+
+.staff-login-intro-tagline {
+  position: relative;
+  margin: 7px 0 0;
+  color: rgba(240, 236, 225, 0.76);
+  font-size: clamp(12px, 2.7vw, 14px);
+  letter-spacing: 0.045em;
+  text-align: center;
+}
+
+.staff-login-intro-caption {
+  margin-top: 28px;
+  color: rgba(217, 181, 107, 0.62);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
 }
 
 .staff-login-stage {
@@ -472,14 +636,24 @@ body:has(.staff-login-page) .public-layout-assistant {
 }
 
 .staff-login-back {
-  display: block;
-  margin: 20px auto 0;
-  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 18px auto 0;
+  padding: 6px 10px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
-  color: var(--gold);
+  color: #d8c18f;
   cursor: pointer;
   font-size: 12px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.staff-login-back:hover {
+  background: rgba(217, 181, 107, 0.09);
+  color: #f1d597;
 }
 
 .staff-login-note {
@@ -498,6 +672,11 @@ body:has(.staff-login-page) .public-layout-assistant {
 }
 
 .staff-login-page button:focus-visible {
+  outline: 2px solid #f1d597;
+  outline-offset: 3px;
+}
+
+.staff-login-page a:focus-visible {
   outline: 2px solid #f1d597;
   outline-offset: 3px;
 }
@@ -641,6 +820,18 @@ th {
 }
 
 @media (max-width: 560px) {
+  .staff-login-intro-glass {
+    min-height: 340px;
+    padding: 54px 18px 28px;
+    border-radius: 23px;
+  }
+
+  .staff-login-intro-art {
+    height: 140px;
+    margin-bottom: 10px;
+    transform: scale(0.88);
+  }
+
   .staff-login-page {
     min-height: 100svh;
     padding: 18px 15px;
@@ -654,6 +845,11 @@ th {
 
   .staff-login-heading {
     font-size: 21px;
+  }
+
+  .staff-login-brand {
+    font-size: 10px;
+    letter-spacing: 0.13em;
   }
 
   .staff-login-subtitle {
@@ -711,8 +907,19 @@ th {
   }
 
   .staff-login-role-button,
-  .staff-login-submit {
+  .staff-login-submit,
+  .staff-login-home {
     transition: none;
+  }
+
+  .staff-login-intro {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .staff-login-intro-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 

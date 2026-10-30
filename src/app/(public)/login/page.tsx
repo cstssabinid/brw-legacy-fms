@@ -1,13 +1,19 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { Suspense } from "react";
 import { LoginForm } from "./login-form";
+import { LoginBrandIntro } from "./login-brand-intro";
 
 export default function LoginPage() {
   return (
     <main className="staff-login-page">
       <div className="staff-login-ambient-ring" aria-hidden="true" />
+      <LoginBrandIntro />
       <div className="staff-login-content">
-        <Link href="/" className="staff-login-brand">BRW LEGACY <span>/ STAFF ACCESS</span></Link>
+        <div className="staff-login-topbar">
+          <Link href="/" className="staff-login-brand">BRW LEGACY <span>/ STAFF ACCESS</span></Link>
+          <Link href="/" className="staff-login-home"><ArrowLeft size={15} aria-hidden="true" /> <span>Home</span></Link>
+        </div>
         <section className="staff-login-stage" aria-label="Staff sign-in">
           <span className="staff-login-corner staff-login-corner-top" aria-hidden="true" />
           <span className="staff-login-corner staff-login-corner-bottom" aria-hidden="true" />
