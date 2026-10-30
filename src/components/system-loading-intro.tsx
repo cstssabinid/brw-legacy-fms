@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Camera, UserRound } from "lucide-react";
+import { Camera, UserRound } from "lucide-react";
 
 export function SystemLoadingIntro() {
   const pathname = usePathname();
@@ -39,10 +38,6 @@ export function SystemLoadingIntro() {
           transition={{ duration: noMotion ? 0 : 0.4, ease: "easeInOut" }}
         >
           <div className="system-loading-glass">
-            <Link href="/" className="staff-login-home system-loading-home">
-              <ArrowLeft size={15} aria-hidden="true" /> <span>Home</span>
-            </Link>
-
             <div className="system-loading-art" aria-hidden="true">
               <motion.div
                 className="system-loading-person"
