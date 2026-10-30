@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
+import { SystemLoadingIntro } from "@/components/system-loading-intro";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark" suppressHydrationWarning>
       <body>
         {children}
+        <SystemLoadingIntro />
         <Toaster richColors position="top-right" />
       </body>
     </html>
